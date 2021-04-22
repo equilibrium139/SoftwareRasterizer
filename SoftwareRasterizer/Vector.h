@@ -130,15 +130,39 @@ inline bool NearZero(const Vec3& vec) {
 	return (std::fabs(vec.x) < e) && (std::fabs(vec.y) < e) && (std::fabs(vec.z) < e);
 }
 
-Vec3 Reflect(const Vec3& v, const Vec3& n) {
+inline Vec3 Reflect(const Vec3& v, const Vec3& n) {
 	return v - 2 * Dot(v, n) * n;
 }
 
-Vec3 Refract(const Vec3& uv, const Vec3& n, float etaiOverEtat) {
+inline Vec3 Refract(const Vec3& uv, const Vec3& n, float etaiOverEtat) {
 	float cosTheta = std::fmin(Dot(-uv, n), 1.0f);
 	Vec3 rOutPerp = etaiOverEtat * (uv + cosTheta * n);
 	Vec3 rOutParallel = -std::sqrt(std::fabs(1.0 - rOutPerp.lengthSquared())) * n;
 	return rOutPerp + rOutParallel;
+}
+
+inline Vec3 RotateX(Vec3 point, float angle) {
+	return {
+		point.x,
+		point.y * std::cos(angle) + point.z * std::sin(angle),
+		-point.y * std::sin(angle) + point.z * std::cos(angle)
+	};
+}
+
+inline Vec3 RotateY(Vec3 point, float angle) {
+	return {
+		point.x * std::cos(angle) - point.z * std::sin(angle),
+		point.y,
+		point.x * std::sin(angle) + point.z * std::cos(angle)
+	};
+}
+
+inline Vec3 RotateZ(Vec3 point, float angle) {
+	return {
+		point.x * std::cos(angle) - point.y * std::sin(angle),
+		point.x * std::sin(angle) + point.y * std::cos(angle),
+		point.z
+	};
 }
 
 using Point3 = Vec3;
