@@ -11,4 +11,7 @@ struct Model {
 	Model(const char* path);
 };
 
+extern Vec3 cubeVertices[8];
+extern Face cubeFaces[12];
+
 #endif // !MODEL_H

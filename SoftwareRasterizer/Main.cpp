@@ -11,40 +11,23 @@
 
 bool g_IsRunning = false;
 Vec3 cameraPosition = { 0, 0, -5 };
-Vec3 cubeRotation = { 0, 0, 0 };
+Vec3 modelRotation = { 0, 0, 0 };
 const int fovFactor = 320;
 Model model("Models/african_head.obj");
-
-Vec3 cubeVertices[8] = {
-	{-1,  -1, -1},
-	{-1,   1, -1},
-	{ 1,   1, -1},
-	{ 1,  -1, -1},
-	{ 1,   1,  1},
-	{ 1,  -1,  1},
-	{-1,   1,  1},
-	{ -1,  -1, 1}
-};
-
-Vec2 projectedCubeVertices[8];
-
-Face cubeFaces[12] = {
-	{0, 1, 2}, {0, 2, 3}, // Front
-	{3, 2, 4}, {3, 4, 5}, // Right
-	{5, 4, 6}, {5, 6, 7}, // Back
-	{7, 6, 1}, {7, 1, 0}, // Left
-	{1, 6, 4}, {1, 4, 2}, // Top
-	{3, 5, 7}, {3, 7, 0}, // Bottom
-};
-
+std::vector<Vec2> modelProjectedVertices;
+std::vector<Triangle> trianglesToRender;
 std::uint32_t previousFrameTime = 0;
 
 void Setup() {
 	g_ColorBuffer = std::vector<std::uint32_t>((std::size_t)g_WindowWidth * g_WindowHeight);
 	g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, g_WindowWidth, g_WindowHeight);
-	for (int i = 0; i < model.vertices.size(); i++) {
-		model.vertices[i].z -= cameraPosition.z;
-		model.vertices[i].y = -model.vertices[i].y;
+	modelProjectedVertices.resize(model.vertices.size());
+	model.vertices.resize(8);
+	model.faces.resize(12);
+	std::copy(cubeVertices, cubeVertices + 8, model.vertices.begin());
+	std::copy(cubeFaces, cubeFaces + 12, model.faces.begin());
+	for (Vec3& vertex : model.vertices) {
+		vertex.y = -vertex.y;
 	}
 }
 
@@ -64,8 +47,8 @@ void ProcessInput() {
 
 Vec2 Project(Vec3& point) {
 	return {
-		(fovFactor * point.x) /*/ point.z*/,
-		(fovFactor * point.y) /*/ point.z*/
+		(fovFactor * point.x) / point.z,
+		(fovFactor * point.y) / point.z
 	};
 }
 
@@ -77,65 +60,55 @@ void Update() {
 		SDL_Delay(waitTime);
 	}
 
-	std::cout << SDL_GetTicks() - previousFrameTime << '\n';
 	previousFrameTime = SDL_GetTicks();
 
-	cubeRotation.x += 0.01f;
-	cubeRotation.y += 0.01f;
-	cubeRotation.z += 0.01f;
+	modelRotation.x += 0.01f;
+	modelRotation.y += 0.01f;
+	modelRotation.z += 0.01f;
 
+	for (int i = 0; i < model.vertices.size(); i++) {
+		auto point = model.vertices[i];
 
-	/*for (int i = 0; i < 8; i++) {
-		Vec3 point = cubeVertices[i];
-		point = RotateX(point, cubeRotation.x);
-		point = RotateY(point, cubeRotation.y);
-		point = RotateZ(point, cubeRotation.z);
-		point.z -= cameraPosition.z;
-		projectedCubeVertices[i] = Project(point);
-		projectedCubeVertices[i].x += g_WindowWidth / 2;
-		projectedCubeVertices[i].y += g_WindowHeight / 2;
-	}*/
+		point = RotateX(point, modelRotation.x);
+		point = RotateY(point, modelRotation.y);
+		point = RotateZ(point, modelRotation.z);
+		point -= cameraPosition;
+		modelProjectedVertices[i] = Project(point);
+		modelProjectedVertices[i].x += g_WindowWidth / 2;
+		modelProjectedVertices[i].y += g_WindowHeight / 2;
+	}
 }
 
 void Render() {
 	SDL_SetRenderDrawColor(g_Renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
 	SDL_RenderClear(g_Renderer);
 
+	/*Vec3 ab = model.vertices[face.b] - model.vertices[face.a];
+	Vec3 ac = model.vertices[face.c] - model.vertices[face.a];
+	Vec3 faceNormal = Cross(ac, ab);
+	if (Dot(faceNormal, model.vertices[face.a]) < 0) {
+		Vec2 a = modelProjectedVertices[face.a];
+		Vec2 b = modelProjectedVertices[face.b];
+		Vec2 c = modelProjectedVertices[face.c];*/
+
 	std::uint32_t color = 0xFFFF0000;
 	for (Face& face : model.faces) {
-		Vec2 a = Project(model.vertices[face.a]);
-		Vec2 b = Project(model.vertices[face.b]);
-		Vec2 c = Project(model.vertices[face.c]);
-
-		a.x += (g_WindowWidth / 2);
-		a.y += (g_WindowHeight / 2);
-		b.x += (g_WindowWidth / 2);
-		b.y += (g_WindowHeight / 2);
-		c.x += (g_WindowWidth / 2);
-		c.y += (g_WindowHeight / 2);
+		Vec2 a = modelProjectedVertices[face.a];
+		Vec2 b = modelProjectedVertices[face.b];
+		Vec2 c = modelProjectedVertices[face.c];
 		
-		DrawLine(a, b, color);
-		DrawLine(a, c, color);
-		DrawLine(b, c, color);
+		Vec2 ab = b - a;
+		Vec2 bc = c - b;
+
+		bool frontFacing = (ab.x * bc.y - ab.y * bc.x) > 0;
+		// frontFacing = true;
+
+		if (frontFacing) {
+			DrawLine(a, b, color);
+			DrawLine(a, c, color);
+			DrawLine(b, c, color);
+		}
 	}
-
-
-	//for (Face& face : cubeFaces) {
-	//	Vec2 a = projectedCubeVertices[face.a];
-	//	Vec2 b = projectedCubeVertices[face.b];
-	//	Vec2 c = projectedCubeVertices[face.c];
-
-	//	/*a.x += (g_WindowWidth / 2);
-	//	a.y += (g_WindowHeight / 2);
-	//	b.x += (g_WindowWidth / 2);
-	//	b.y += (g_WindowHeight / 2);
-	//	c.x += (g_WindowWidth / 2);
-	//	c.y += (g_WindowHeight / 2);*/
-
-	//	DrawLine(a, b, color);
-	//	DrawLine(a, c, color);
-	//	DrawLine(b, c, color);
-	//}
 	
 	RenderColorBuffer();
 	ClearColorBuffer(0xFF000000);

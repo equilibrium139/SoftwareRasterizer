@@ -4,6 +4,14 @@
 #include <cmath>
 #include <iostream>
 
+struct Vec2 {
+	float x, y;
+};
+
+inline Vec2 operator-(Vec2 a, Vec2 b) {
+	return { a.x - b.x, a.y - b.y };
+}
+
 class Vec3
 {
 public:
@@ -28,6 +36,13 @@ public:
 		x += rhs.x;
 		y += rhs.y;
 		z += rhs.z;
+		return *this;
+	}
+
+	Vec3& operator-=(const Vec3& rhs) {
+		x -= rhs.x;
+		y -= rhs.y;
+		z -= rhs.z;
 		return *this;
 	}
 
@@ -59,10 +74,6 @@ public:
 	float lengthSquared() const {
 		return x * x + y * y + z * z;
 	}
-};
-
-struct Vec2 {
-	float x, y;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Vec3& v) {
