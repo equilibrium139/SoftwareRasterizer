@@ -19,8 +19,8 @@ std::vector<Triangle> trianglesToRender;
 std::uint32_t previousFrameTime = 0;
 
 void Setup() {
-	g_ColorBuffer = std::vector<std::uint32_t>((std::size_t)g_WindowWidth * g_WindowHeight);
-	g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, g_WindowWidth, g_WindowHeight);
+	g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, g_Framebuffer.Width(), g_Framebuffer.Height());
+
 	modelProjectedVertices.resize(model.vertices.size());
 	model.vertices.resize(8);
 	model.faces.resize(12);
@@ -74,8 +74,8 @@ void Update() {
 		point = RotateZ(point, modelRotation.z);
 		point -= cameraPosition;
 		modelProjectedVertices[i] = Project(point);
-		modelProjectedVertices[i].x += g_WindowWidth / 2;
-		modelProjectedVertices[i].y += g_WindowHeight / 2;
+		modelProjectedVertices[i].x += g_Framebuffer.Width() / 2;
+		modelProjectedVertices[i].y += g_Framebuffer.Height() / 2;
 	}
 }
 
@@ -92,26 +92,30 @@ void Render() {
 		Vec2 c = modelProjectedVertices[face.c];*/
 
 	std::uint32_t color = 0xFFFF0000;
-	for (Face& face : model.faces) {
-		Vec2 a = modelProjectedVertices[face.a];
-		Vec2 b = modelProjectedVertices[face.b];
-		Vec2 c = modelProjectedVertices[face.c];
-		
-		Vec2 ab = b - a;
-		Vec2 bc = c - b;
+	//for (Face& face : model.faces) {
+	//	Vec2 a = modelProjectedVertices[face.a];
+	//	Vec2 b = modelProjectedVertices[face.b];
+	//	Vec2 c = modelProjectedVertices[face.c];
+	//	
+	//	Vec2 ab = b - a;
+	//	Vec2 bc = c - b;
 
-		bool frontFacing = (ab.x * bc.y - ab.y * bc.x) > 0;
-		// frontFacing = true;
+	//	bool frontFacing = (ab.x * bc.y - ab.y * bc.x) > 0;
+	//	// frontFacing = true;
 
-		if (frontFacing) {
-			DrawLine(a, b, color);
-			DrawLine(a, c, color);
-			DrawLine(b, c, color);
-		}
-	}
+	//	if (frontFacing) {
+	//		DrawTriangle(a, b, c, color);
+	//	}
+	//}
+
+	Vec2 a{ 300, 100 };
+	Vec2 b{ 50, 400 };
+	Vec2 c{ 500, 700 };
+	g_Framebuffer.DrawFilledTriangle(a, b, c, color);
+	g_Framebuffer.DrawTriangle(a, b, c, 0xFF00FF00);
 	
 	RenderColorBuffer();
-	ClearColorBuffer(0xFF000000);
+	g_Framebuffer.ClearColorBuffer(0xFF000000);
 
 	SDL_RenderPresent(g_Renderer);
 }

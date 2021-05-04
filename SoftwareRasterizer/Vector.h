@@ -148,7 +148,7 @@ inline Vec3 Reflect(const Vec3& v, const Vec3& n) {
 inline Vec3 Refract(const Vec3& uv, const Vec3& n, float etaiOverEtat) {
 	float cosTheta = std::fmin(Dot(-uv, n), 1.0f);
 	Vec3 rOutPerp = etaiOverEtat * (uv + cosTheta * n);
-	Vec3 rOutParallel = -std::sqrt(std::fabs(1.0 - rOutPerp.lengthSquared())) * n;
+	Vec3 rOutParallel = -std::sqrt(std::fabs(1.0f - rOutPerp.lengthSquared())) * n;
 	return rOutPerp + rOutParallel;
 }
 
@@ -175,8 +175,5 @@ inline Vec3 RotateZ(Vec3 point, float angle) {
 		point.z
 	};
 }
-
-using Point3 = Vec3;
-using Color = Vec3;
 
 #endif // VECTOR_H
