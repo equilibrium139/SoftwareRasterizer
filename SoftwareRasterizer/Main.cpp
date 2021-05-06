@@ -2,6 +2,8 @@
 
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
+#include <ctime>
 #include <array>
 #include <iostream>
 #include <vector>
@@ -17,6 +19,11 @@ Model model("Models/african_head.obj");
 std::vector<Vec2> modelProjectedVertices;
 std::vector<Triangle> trianglesToRender;
 std::uint32_t previousFrameTime = 0;
+Color randomColors[256];
+Vec2 a{ 300, 100 };
+Vec2 b{ 50, 400 };
+Vec2 c{ 500, 700 };
+float rot = 0.0f;
 
 void Setup() {
 	g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, g_Framebuffer.Width(), g_Framebuffer.Height());
@@ -28,6 +35,11 @@ void Setup() {
 	std::copy(cubeFaces, cubeFaces + 12, model.faces.begin());
 	for (Vec3& vertex : model.vertices) {
 		vertex.y = -vertex.y;
+	}
+
+	std::srand(std::time(nullptr));
+	for (Color& color : randomColors) {
+		color = (Color)rand();
 	}
 }
 
@@ -60,11 +72,15 @@ void Update() {
 		SDL_Delay(waitTime);
 	}
 
+	
+	if (auto frametime = SDL_GetTicks() - previousFrameTime > 35) {
+		std::cout << frametime << '\n';
+	}
 	previousFrameTime = SDL_GetTicks();
 
-	modelRotation.x += 0.01f;
-	modelRotation.y += 0.01f;
-	modelRotation.z += 0.01f;
+	modelRotation.x += 0.1f;
+	modelRotation.y += 0.1f;
+	modelRotation.z += 0.1f;
 
 	for (int i = 0; i < model.vertices.size(); i++) {
 		auto point = model.vertices[i];
@@ -91,28 +107,55 @@ void Render() {
 		Vec2 b = modelProjectedVertices[face.b];
 		Vec2 c = modelProjectedVertices[face.c];*/
 
-	std::uint32_t color = 0xFFFF0000;
-	//for (Face& face : model.faces) {
-	//	Vec2 a = modelProjectedVertices[face.a];
-	//	Vec2 b = modelProjectedVertices[face.b];
-	//	Vec2 c = modelProjectedVertices[face.c];
-	//	
-	//	Vec2 ab = b - a;
-	//	Vec2 bc = c - b;
+	std::uint32_t index = 0;
+	for (Face& face : model.faces) {
+		Vec2 a = modelProjectedVertices[face.a];
+		Vec2 b = modelProjectedVertices[face.b];
+		Vec2 c = modelProjectedVertices[face.c];
 
-	//	bool frontFacing = (ab.x * bc.y - ab.y * bc.x) > 0;
-	//	// frontFacing = true;
+		Vec2 ab = b - a;
+		Vec2 bc = c - b;
 
-	//	if (frontFacing) {
-	//		DrawTriangle(a, b, c, color);
-	//	}
-	//}
+		bool frontFacing = (ab.x * bc.y - ab.y * bc.x) > 0;
 
-	Vec2 a{ 300, 100 };
-	Vec2 b{ 50, 400 };
-	Vec2 c{ 500, 700 };
-	g_Framebuffer.DrawFilledTriangle(a, b, c, color);
-	g_Framebuffer.DrawTriangle(a, b, c, 0xFF00FF00);
+		if (frontFacing) {
+			Vec2i ai{ a.x, a.y };
+			Vec2i bi{ b.x, b.y };
+			Vec2i ci{ c.x, c.y };
+
+			g_Framebuffer.DrawFilledTriangle(ai, bi, ci, 0xFFFFFFFF);
+		}
+		
+		index++;
+	}
+
+
+	/*Vec2 a{ 1042.06, 619.691 };
+	Vec2 b{ 881.459, 593.28};
+	Vec2 c{ 882.883, 592.907}; */
+
+	Vec2 a{ 1040.49, 460.122};
+	Vec2 b{ 878.444, 471.933};
+	Vec2 c{ 895.876, 633.498};
+	/*Vec2 a{ 100, 100 };
+	Vec2 b{ 100, 100 };
+	Vec2 c{ 200, 100 }; */
+	Vec2i ai{ a.x, a.y };
+	Vec2i bi{ b.x, b.y };
+	Vec2i ci{ c.x, c.y };
+	// g_Framebuffer.DrawFilledTriangle(ai, bi, ci, 0xFFFFFFFF);
+	/*g_Framebuffer.DrawPixel(a.x, a.y, 0xFFFFFFFF);
+	g_Framebuffer.DrawPixel(b.x, b.y, 0xFFFFFFFF);
+	g_Framebuffer.DrawPixel(c.x, c.y, 0xFFFFFFFF);*/
+
+	// g_Framebuffer.DrawLine(a, c, 0xFFFF0000);
+	/*rot += 0.001f;
+	auto arot = RotateZ({ a.x, a.y, 0 }, rot);
+	auto brot = RotateZ({ b.x, b.y, 0 }, rot);
+	auto crot = RotateZ({ c.x, c.y, 0 }, rot);
+	
+	g_Framebuffer.DrawFilledTriangle({ arot.x, arot.y }, { brot.x, brot.y }, { crot.x, crot.y }, 0xFFFF0000);*/
+	// g_Framebuffer.DrawTriangle(a, b, c, 0xFF00FF00);
 	
 	RenderColorBuffer();
 	g_Framebuffer.ClearColorBuffer(0xFF000000);

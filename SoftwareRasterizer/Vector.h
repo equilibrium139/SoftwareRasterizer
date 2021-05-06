@@ -8,6 +8,14 @@ struct Vec2 {
 	float x, y;
 };
 
+struct Vec2i {
+	int x, y;
+};
+
+inline bool operator==(Vec2i lhs, Vec2i rhs) {
+	return lhs.x == rhs.x && lhs.y == rhs.y;
+}
+
 inline Vec2 operator-(Vec2 a, Vec2 b) {
 	return { a.x - b.x, a.y - b.y };
 }
