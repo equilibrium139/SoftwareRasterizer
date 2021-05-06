@@ -38,6 +38,10 @@ public:
 		}
 	}
 
+	void DrawPixel(Vec2i point, Color color) {
+		DrawPixel(point.x, point.y, color);
+	}
+
 	void DrawLine(Vec2i a, Vec2i b, Color color)
 	{
 		DrawLine(a.x, a.y, b.x, b.y, color);
@@ -88,6 +92,7 @@ public:
 
 private:
 	void SetMinMax(int y, int x) {
+		if (y < 0 || y > height - 1) return;
 		if (x < minMaxXValues[y].first) minMaxXValues[y].first = x;
 		if (x > minMaxXValues[y].second) minMaxXValues[y].second = x;
 	}

@@ -12,7 +12,8 @@
 #include "Model.h"
 
 bool g_IsRunning = false;
-Vec3 cameraPosition = { 0, 0, -5 };
+bool g_BackfaceCullingEnabled = true;
+Vec3 cameraPosition = { 0, 0, -4 };
 Vec3 modelRotation = { 0, 0, 0 };
 const int fovFactor = 320;
 Model model("Models/african_head.obj");
@@ -20,19 +21,27 @@ std::vector<Vec2> modelProjectedVertices;
 std::vector<Triangle> trianglesToRender;
 std::uint32_t previousFrameTime = 0;
 Color randomColors[256];
-Vec2 a{ 300, 100 };
-Vec2 b{ 50, 400 };
-Vec2 c{ 500, 700 };
-float rot = 0.0f;
+
+enum class RenderMode {
+	WireframeAndVertices,
+	Wireframe,
+	Filled,
+	FilledAndWireframe
+};
+
+RenderMode g_RenderMode = RenderMode::Filled;
 
 void Setup() {
 	g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, g_Framebuffer.Width(), g_Framebuffer.Height());
 
-	modelProjectedVertices.resize(model.vertices.size());
+	modelProjectedVertices.resize(8);
 	model.vertices.resize(8);
 	model.faces.resize(12);
 	std::copy(cubeVertices, cubeVertices + 8, model.vertices.begin());
 	std::copy(cubeFaces, cubeFaces + 12, model.faces.begin());
+
+	// modelProjectedVertices.resize(model.vertices.size());
+
 	for (Vec3& vertex : model.vertices) {
 		vertex.y = -vertex.y;
 	}
@@ -52,6 +61,14 @@ void ProcessInput() {
 			g_IsRunning = false;
 			break;
 		case SDL_KEYDOWN:
+			switch (event.key.keysym.sym) {
+				case SDLK_ESCAPE: g_IsRunning = false; break;
+				case SDLK_1: g_RenderMode = RenderMode::WireframeAndVertices;  break;
+				case SDLK_2: g_RenderMode = RenderMode::Wireframe;  break;
+				case SDLK_3: g_RenderMode = RenderMode::Filled;  break;
+				case SDLK_4: g_RenderMode = RenderMode::FilledAndWireframe; break;
+				case SDLK_c: g_BackfaceCullingEnabled = !g_BackfaceCullingEnabled; break;
+			}
 			if (event.key.keysym.sym == SDLK_ESCAPE) { g_IsRunning = false; }
 			break;
 	}
@@ -73,14 +90,14 @@ void Update() {
 	}
 
 	
-	if (auto frametime = SDL_GetTicks() - previousFrameTime > 35) {
+	if (auto frametime = SDL_GetTicks() - previousFrameTime; frametime > 35) {
 		std::cout << frametime << '\n';
 	}
 	previousFrameTime = SDL_GetTicks();
 
-	modelRotation.x += 0.1f;
+	//modelRotation.x += 0.1f;
 	modelRotation.y += 0.1f;
-	modelRotation.z += 0.1f;
+	/*modelRotation.z += 0.1f;*/
 
 	for (int i = 0; i < model.vertices.size(); i++) {
 		auto point = model.vertices[i];
@@ -116,16 +133,28 @@ void Render() {
 		Vec2 ab = b - a;
 		Vec2 bc = c - b;
 
+		// auto signedScaledArea = (a.x * b.y - a.y * b.x) + (b.x * c.y - b.y * c.x) + (c.x * a.y - c.y * a.x); // = triangle area * 2
 		bool frontFacing = (ab.x * bc.y - ab.y * bc.x) > 0;
 
-		if (frontFacing) {
+		if (!g_BackfaceCullingEnabled || frontFacing) {
 			Vec2i ai{ a.x, a.y };
 			Vec2i bi{ b.x, b.y };
 			Vec2i ci{ c.x, c.y };
-
-			g_Framebuffer.DrawFilledTriangle(ai, bi, ci, 0xFFFFFFFF);
+			switch (g_RenderMode) {
+				case RenderMode::Wireframe: g_Framebuffer.DrawTriangle(ai, bi, ci, 0xFFFFFFFF); break;
+				case RenderMode::WireframeAndVertices: 
+					g_Framebuffer.DrawTriangle(ai, bi, ci, 0xFFFFFFFF); 
+					g_Framebuffer.DrawRect(a.x - 2, a.y - 2, 4, 4, 0xFFFF0000);
+					g_Framebuffer.DrawRect(b.x - 2, b.y - 2, 4, 4, 0xFFFF0000);
+					g_Framebuffer.DrawRect(c.x - 2, c.y - 2, 4, 4, 0xFFFF0000);
+					break;
+				case RenderMode::Filled: g_Framebuffer.DrawFilledTriangle(ai, bi, ci, randomColors[index % 256]); break;
+				case RenderMode::FilledAndWireframe: 
+					g_Framebuffer.DrawFilledTriangle(ai, bi, ci, randomColors[index % 256]);
+					g_Framebuffer.DrawTriangle(ai, bi, ci, 0xFFFFFFFF);
+					break;
+			}
 		}
-		
 		index++;
 	}
 
