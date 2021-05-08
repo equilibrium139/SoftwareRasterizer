@@ -17,12 +17,12 @@ Vec3 cubeVertices[8] = {
 };
 
 Face cubeFaces[12] = {
-	{0, 1, 2}, {0, 2, 3}, // Front
-	{3, 2, 5}, {3, 5, 4}, // Left
-	{4, 5, 6}, {4, 6, 7}, // Back
-	{7, 6, 1}, {7, 1, 0}, // Right
-	{1, 6, 5}, {1, 5, 2}, // Top
-	{3, 4, 7}, {3, 7, 0}  // Bottom
+	{0, 1, 2, 0xFFFF0000}, {0, 2, 3, 0xFFFF0000 }, // Front
+	{3, 2, 5, 0xFF00FF00 }, {3, 5, 4, 0xFF00FF00 }, // Left
+	{4, 5, 6, 0xFF0000FF }, {4, 6, 7, 0xFF0000FF }, // Back
+	{7, 6, 1, 0xFFFFFF00 }, {7, 1, 0, 0xFFFFFF00 }, // Right
+	{1, 6, 5, 0xFFFF00FF }, {1, 5, 2, 0xFFFF00FF }, // Top
+	{3, 4, 7, 0xFF00FFFF }, {3, 7, 0, 0xFF00FFFF }  // Bottom
 };
 
 Model::Model(const char* path)

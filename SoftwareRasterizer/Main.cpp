@@ -7,6 +7,7 @@
 #include <array>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include "Vector.h"
 #include "Display.h"
 #include "Model.h"
@@ -18,6 +19,7 @@ Vec3 modelRotation = { 0, 0, 0 };
 const int fovFactor = 320;
 Model model("Models/african_head.obj");
 std::vector<Vec2> modelProjectedVertices;
+std::vector<float> modelTransformedVerticesDepths;
 std::vector<Triangle> trianglesToRender;
 std::uint32_t previousFrameTime = 0;
 Color randomColors[256];
@@ -35,6 +37,7 @@ void Setup() {
 	g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, g_Framebuffer.Width(), g_Framebuffer.Height());
 
 	modelProjectedVertices.resize(8);
+	modelTransformedVerticesDepths.resize(8);
 	model.vertices.resize(8);
 	model.faces.resize(12);
 	std::copy(cubeVertices, cubeVertices + 8, model.vertices.begin());
@@ -90,23 +93,24 @@ void Update() {
 	}
 
 	
-	if (auto frametime = SDL_GetTicks() - previousFrameTime; frametime > 35) {
+	/*if (auto frametime = SDL_GetTicks() - previousFrameTime; frametime > 35) {
 		std::cout << frametime << '\n';
-	}
+	}*/
 	previousFrameTime = SDL_GetTicks();
 
-	//modelRotation.x += 0.1f;
-	modelRotation.y += 0.1f;
-	/*modelRotation.z += 0.1f;*/
+	modelRotation.x += 0.01f;
+	modelRotation.y += 0.01f;
+	modelRotation.z += 0.01f;
 
 	for (int i = 0; i < model.vertices.size(); i++) {
-		auto point = model.vertices[i];
+		auto transformedPoint = model.vertices[i];
 
-		point = RotateX(point, modelRotation.x);
-		point = RotateY(point, modelRotation.y);
-		point = RotateZ(point, modelRotation.z);
-		point -= cameraPosition;
-		modelProjectedVertices[i] = Project(point);
+		transformedPoint = RotateX(transformedPoint, modelRotation.x);
+		transformedPoint = RotateY(transformedPoint, modelRotation.y);
+		transformedPoint = RotateZ(transformedPoint, modelRotation.z);
+		transformedPoint -= cameraPosition;
+		modelTransformedVerticesDepths[i] = transformedPoint.z;
+		modelProjectedVertices[i] = Project(transformedPoint);
 		modelProjectedVertices[i].x += g_Framebuffer.Width() / 2;
 		modelProjectedVertices[i].y += g_Framebuffer.Height() / 2;
 	}
@@ -116,13 +120,24 @@ void Render() {
 	SDL_SetRenderDrawColor(g_Renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
 	SDL_RenderClear(g_Renderer);
 
-	/*Vec3 ab = model.vertices[face.b] - model.vertices[face.a];
-	Vec3 ac = model.vertices[face.c] - model.vertices[face.a];
-	Vec3 faceNormal = Cross(ac, ab);
-	if (Dot(faceNormal, model.vertices[face.a]) < 0) {
-		Vec2 a = modelProjectedVertices[face.a];
-		Vec2 b = modelProjectedVertices[face.b];
-		Vec2 c = modelProjectedVertices[face.c];*/
+	std::sort(model.faces.begin(), model.faces.end(),
+		[](Face& face1, Face& face2) {
+			auto face1Depth1 = modelTransformedVerticesDepths[face1.a];
+			auto face1Depth2 = modelTransformedVerticesDepths[face1.b];
+			auto face1Depth3 = modelTransformedVerticesDepths[face1.c];
+
+			auto face2Depth1 = modelTransformedVerticesDepths[face2.a];
+			auto face2Depth2 = modelTransformedVerticesDepths[face2.b];
+			auto face2Depth3 = modelTransformedVerticesDepths[face2.c];
+
+			auto face1AvgDepth = (face1Depth1 + face1Depth2 + face1Depth3) / 3.0f;
+			auto face2AvgDepth = (face2Depth1 + face2Depth2 + face2Depth3) / 3.0f;
+
+			/*auto face1MaxDepth = std::max({ face1Depth1, face1Depth2, face1Depth3 });
+			auto face2MaxDepth = std::max({ face2Depth1, face2Depth2, face2Depth3 });*/
+
+			return face1AvgDepth > face2AvgDepth;
+		});
 
 	std::uint32_t index = 0;
 	for (Face& face : model.faces) {
@@ -135,7 +150,7 @@ void Render() {
 
 		// auto signedScaledArea = (a.x * b.y - a.y * b.x) + (b.x * c.y - b.y * c.x) + (c.x * a.y - c.y * a.x); // = triangle area * 2
 		bool frontFacing = (ab.x * bc.y - ab.y * bc.x) > 0;
-
+		// TODO fix colors
 		if (!g_BackfaceCullingEnabled || frontFacing) {
 			Vec2i ai{ a.x, a.y };
 			Vec2i bi{ b.x, b.y };
@@ -148,9 +163,9 @@ void Render() {
 					g_Framebuffer.DrawRect(b.x - 2, b.y - 2, 4, 4, 0xFFFF0000);
 					g_Framebuffer.DrawRect(c.x - 2, c.y - 2, 4, 4, 0xFFFF0000);
 					break;
-				case RenderMode::Filled: g_Framebuffer.DrawFilledTriangle(ai, bi, ci, randomColors[index % 256]); break;
+				case RenderMode::Filled: g_Framebuffer.DrawFilledTriangle(ai, bi, ci, face.color); break;
 				case RenderMode::FilledAndWireframe: 
-					g_Framebuffer.DrawFilledTriangle(ai, bi, ci, randomColors[index % 256]);
+					g_Framebuffer.DrawFilledTriangle(ai, bi, ci, face.color);
 					g_Framebuffer.DrawTriangle(ai, bi, ci, 0xFFFFFFFF);
 					break;
 			}

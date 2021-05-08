@@ -4,6 +4,8 @@
 #include <cmath>
 #include <iostream>
 
+using Color = std::uint32_t;
+
 struct Vec2 {
 	float x, y;
 };

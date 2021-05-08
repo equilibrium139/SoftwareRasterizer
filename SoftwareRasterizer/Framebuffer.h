@@ -6,8 +6,6 @@
 #include <utility>
 #include <limits>
 
-using Color = std::uint32_t;
-
 class Framebuffer {
 public:
 	Framebuffer() = default;

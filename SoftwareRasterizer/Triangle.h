@@ -9,4 +9,5 @@ struct Triangle {
 
 struct Face {
 	std::uint32_t a, b, c;
+	Color color;
 };
