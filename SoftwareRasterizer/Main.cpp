@@ -11,18 +11,17 @@
 #include "Vector.h"
 #include "Display.h"
 #include "Model.h"
+#include "Matrix.h"
 
 bool g_IsRunning = false;
 bool g_BackfaceCullingEnabled = true;
-Vec3 cameraPosition = { 0, 0, -4 };
-Vec3 modelRotation = { 0, 0, 0 };
+Vec3 cameraPosition = { 0, 0, -2 };
 const int fovFactor = 320;
 Model model("Models/african_head.obj");
 std::vector<Vec2> modelProjectedVertices;
 std::vector<float> modelTransformedVerticesDepths;
 std::vector<Triangle> trianglesToRender;
 std::uint32_t previousFrameTime = 0;
-Color randomColors[256];
 
 enum class RenderMode {
 	WireframeAndVertices,
@@ -31,28 +30,24 @@ enum class RenderMode {
 	FilledAndWireframe
 };
 
-RenderMode g_RenderMode = RenderMode::Filled;
+RenderMode g_RenderMode = RenderMode::Wireframe;
 
 void Setup() {
 	g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, g_Framebuffer.Width(), g_Framebuffer.Height());
 
-	modelProjectedVertices.resize(8);
+	/*modelProjectedVertices.resize(8);
 	modelTransformedVerticesDepths.resize(8);
 	model.vertices.resize(8);
 	model.faces.resize(12);
 	std::copy(cubeVertices, cubeVertices + 8, model.vertices.begin());
-	std::copy(cubeFaces, cubeFaces + 12, model.faces.begin());
+	std::copy(cubeFaces, cubeFaces + 12, model.faces.begin());*/
 
-	// modelProjectedVertices.resize(model.vertices.size());
+	modelProjectedVertices.resize(model.vertices.size());
+	modelTransformedVerticesDepths.resize(model.vertices.size());
 
-	for (Vec3& vertex : model.vertices) {
+	/*for (Vec3& vertex : model.vertices) {
 		vertex.y = -vertex.y;
-	}
-
-	std::srand(std::time(nullptr));
-	for (Color& color : randomColors) {
-		color = (Color)rand();
-	}
+	}*/
 }
 
 void ProcessInput() {
@@ -92,23 +87,23 @@ void Update() {
 		SDL_Delay(waitTime);
 	}
 
-	
-	/*if (auto frametime = SDL_GetTicks() - previousFrameTime; frametime > 35) {
-		std::cout << frametime << '\n';
-	}*/
+	std::cout << SDL_GetTicks() - previousFrameTime << '\n';
+
 	previousFrameTime = SDL_GetTicks();
 
-	modelRotation.x += 0.01f;
-	modelRotation.y += 0.01f;
-	modelRotation.z += 0.01f;
-
+	model.rotation.z += 0.01f;
+	model.rotation.x += 0.01f;
+	model.rotation.y += 0.01f;
+	// model.scale = { 2, 2, 2 };
+	Mat4 modelViewMatrix = Translation(-cameraPosition) * model.GetModelMatrix();
+	
 	for (int i = 0; i < model.vertices.size(); i++) {
-		auto transformedPoint = model.vertices[i];
-
-		transformedPoint = RotateX(transformedPoint, modelRotation.x);
+		auto transformedPoint = modelViewMatrix * model.vertices[i];
+		/*transformedPoint = RotateX(transformedPoint, modelRotation.x);
 		transformedPoint = RotateY(transformedPoint, modelRotation.y);
 		transformedPoint = RotateZ(transformedPoint, modelRotation.z);
-		transformedPoint -= cameraPosition;
+		
+		transformedPoint -= cameraPosition;*/
 		modelTransformedVerticesDepths[i] = transformedPoint.z;
 		modelProjectedVertices[i] = Project(transformedPoint);
 		modelProjectedVertices[i].x += g_Framebuffer.Width() / 2;
@@ -133,9 +128,6 @@ void Render() {
 			auto face1AvgDepth = (face1Depth1 + face1Depth2 + face1Depth3) / 3.0f;
 			auto face2AvgDepth = (face2Depth1 + face2Depth2 + face2Depth3) / 3.0f;
 
-			/*auto face1MaxDepth = std::max({ face1Depth1, face1Depth2, face1Depth3 });
-			auto face2MaxDepth = std::max({ face2Depth1, face2Depth2, face2Depth3 });*/
-
 			return face1AvgDepth > face2AvgDepth;
 		});
 
@@ -149,8 +141,7 @@ void Render() {
 		Vec2 bc = c - b;
 
 		// auto signedScaledArea = (a.x * b.y - a.y * b.x) + (b.x * c.y - b.y * c.x) + (c.x * a.y - c.y * a.x); // = triangle area * 2
-		bool frontFacing = (ab.x * bc.y - ab.y * bc.x) > 0;
-		// TODO fix colors
+		bool frontFacing = (ab.x * bc.y - ab.y * bc.x) < 0;
 		if (!g_BackfaceCullingEnabled || frontFacing) {
 			Vec2i ai{ a.x, a.y };
 			Vec2i bi{ b.x, b.y };
@@ -172,34 +163,6 @@ void Render() {
 		}
 		index++;
 	}
-
-
-	/*Vec2 a{ 1042.06, 619.691 };
-	Vec2 b{ 881.459, 593.28};
-	Vec2 c{ 882.883, 592.907}; */
-
-	Vec2 a{ 1040.49, 460.122};
-	Vec2 b{ 878.444, 471.933};
-	Vec2 c{ 895.876, 633.498};
-	/*Vec2 a{ 100, 100 };
-	Vec2 b{ 100, 100 };
-	Vec2 c{ 200, 100 }; */
-	Vec2i ai{ a.x, a.y };
-	Vec2i bi{ b.x, b.y };
-	Vec2i ci{ c.x, c.y };
-	// g_Framebuffer.DrawFilledTriangle(ai, bi, ci, 0xFFFFFFFF);
-	/*g_Framebuffer.DrawPixel(a.x, a.y, 0xFFFFFFFF);
-	g_Framebuffer.DrawPixel(b.x, b.y, 0xFFFFFFFF);
-	g_Framebuffer.DrawPixel(c.x, c.y, 0xFFFFFFFF);*/
-
-	// g_Framebuffer.DrawLine(a, c, 0xFFFF0000);
-	/*rot += 0.001f;
-	auto arot = RotateZ({ a.x, a.y, 0 }, rot);
-	auto brot = RotateZ({ b.x, b.y, 0 }, rot);
-	auto crot = RotateZ({ c.x, c.y, 0 }, rot);
-	
-	g_Framebuffer.DrawFilledTriangle({ arot.x, arot.y }, { brot.x, brot.y }, { crot.x, crot.y }, 0xFFFF0000);*/
-	// g_Framebuffer.DrawTriangle(a, b, c, 0xFF00FF00);
 	
 	RenderColorBuffer();
 	g_Framebuffer.ClearColorBuffer(0xFF000000);
