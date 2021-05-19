@@ -31,6 +31,15 @@ inline Vec3 operator*(const Mat4& lhs, Vec3 rhs) {
 	};
 }
 
+inline Vec4 operator*(const Mat4& lhs, Vec4 rhs) {
+	return {
+		lhs[0][0] * rhs.x + lhs[0][1] * rhs.y + lhs[0][2] * rhs.z + lhs[0][3] * rhs.w,
+		lhs[1][0] * rhs.x + lhs[1][1] * rhs.y + lhs[1][2] * rhs.z + lhs[1][3] * rhs.w,
+		lhs[2][0] * rhs.x + lhs[2][1] * rhs.y + lhs[2][2] * rhs.z + lhs[2][3] * rhs.w,
+		lhs[3][0] * rhs.x + lhs[3][1] * rhs.y + lhs[3][2] * rhs.z + lhs[3][3] * rhs.w
+	};
+}
+
 inline Mat4 Identity() {
 	return {
 		1, 0, 0, 0,
@@ -110,4 +119,15 @@ inline Mat4 Rotation(float xRadians, float yRadians, float zRadians) {
 
 inline Mat4 Rotation(Vec3 vec) {
 	return Rotation(vec.x, vec.y, vec.z);
+}
+
+inline Mat4 Perspective(float inverseAspectRatio, float fovRadians, float zNear, float zFar) {
+	// Scales x and y and normalizes z values from [zNear, zFar] to [0, zFar] and puts z in w
+	float inverseTanFov = 1.0f / std::tan(fovRadians / 2);
+	return {
+		inverseAspectRatio * inverseTanFov, 0,				0,						0,
+		0,									inverseTanFov,  0,						0,
+		0,									0,				zFar / (zFar - zNear), -((zNear * zFar) / (zFar - zNear)),
+		0,									0,				1,						0
+	};
 }

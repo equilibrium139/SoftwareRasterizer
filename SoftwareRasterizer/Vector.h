@@ -22,25 +22,19 @@ inline Vec2 operator-(Vec2 a, Vec2 b) {
 	return { a.x - b.x, a.y - b.y };
 }
 
+struct Vec4 {
+	float x, y, z, w;
+};
+
 class Vec3
 {
 public:
-	union {
-		struct {
-			float x, y, z;
-		};
-		struct {
-			float r, g, b;
-		};
-		float v[3];
-	};
+	float x, y, z;
 
 	Vec3() {}
 	Vec3(float x, float y, float z) : x(x), y(y), z(z) {}
 
 	Vec3 operator-() const { return Vec3{ -x, -y, -z }; }
-	float operator[](int i) const { return v[i]; }
-	float& operator[](int i) { return v[i]; }
 
 	Vec3& operator+=(const Vec3& rhs) {
 		x += rhs.x;

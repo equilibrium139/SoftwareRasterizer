@@ -15,12 +15,10 @@
 
 bool g_IsRunning = false;
 bool g_BackfaceCullingEnabled = true;
-Vec3 cameraPosition = { 0, 0, -2 };
-const int fovFactor = 320;
+Vec3 cameraPosition = { 0, 0, -4 };
 Model model("Models/african_head.obj");
 std::vector<Vec2> modelProjectedVertices;
 std::vector<float> modelTransformedVerticesDepths;
-std::vector<Triangle> trianglesToRender;
 std::uint32_t previousFrameTime = 0;
 
 enum class RenderMode {
@@ -35,15 +33,17 @@ RenderMode g_RenderMode = RenderMode::Wireframe;
 void Setup() {
 	g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, g_Framebuffer.Width(), g_Framebuffer.Height());
 
-	/*modelProjectedVertices.resize(8);
+	// cube
+	modelProjectedVertices.resize(8);
 	modelTransformedVerticesDepths.resize(8);
 	model.vertices.resize(8);
 	model.faces.resize(12);
 	std::copy(cubeVertices, cubeVertices + 8, model.vertices.begin());
-	std::copy(cubeFaces, cubeFaces + 12, model.faces.begin());*/
+	std::copy(cubeFaces, cubeFaces + 12, model.faces.begin());
 
-	modelProjectedVertices.resize(model.vertices.size());
-	modelTransformedVerticesDepths.resize(model.vertices.size());
+	// head
+	/*modelProjectedVertices.resize(model.vertices.size());
+	modelTransformedVerticesDepths.resize(model.vertices.size());*/
 
 	/*for (Vec3& vertex : model.vertices) {
 		vertex.y = -vertex.y;
@@ -72,11 +72,8 @@ void ProcessInput() {
 	}
 }
 
-Vec2 Project(Vec3& point) {
-	return {
-		(fovFactor * point.x) / point.z,
-		(fovFactor * point.y) / point.z
-	};
+float Radians(float degrees) {
+	return 0.01745329251f * degrees;
 }
 
 void Update() {
@@ -94,20 +91,29 @@ void Update() {
 	model.rotation.z += 0.01f;
 	model.rotation.x += 0.01f;
 	model.rotation.y += 0.01f;
-	// model.scale = { 2, 2, 2 };
-	Mat4 modelViewMatrix = Translation(-cameraPosition) * model.GetModelMatrix();
+	Mat4 worldMatrix = model.GetModelMatrix();
+	Mat4 viewMatrix = Translation(-cameraPosition);
+	Mat4 projMatrix = Perspective((float)g_Framebuffer.Height() / (float)g_Framebuffer.Width(), M_PI / 3.0f, 0.1f, 100.0f);
+	Mat4 worldViewMatrix = viewMatrix * worldMatrix;
 	
 	for (int i = 0; i < model.vertices.size(); i++) {
-		auto transformedPoint = modelViewMatrix * model.vertices[i];
-		/*transformedPoint = RotateX(transformedPoint, modelRotation.x);
-		transformedPoint = RotateY(transformedPoint, modelRotation.y);
-		transformedPoint = RotateZ(transformedPoint, modelRotation.z);
+		Vec4 vertex = { model.vertices[i].x, model.vertices[i].y, model.vertices[i].z, 1.0f };
+		auto vertexViewCoords = worldViewMatrix * vertex;
+		auto vertexProjCoords = projMatrix * vertexViewCoords;
+		modelTransformedVerticesDepths[i] = vertexViewCoords.z;
+		if (vertexProjCoords.w != 0.0f) {
+			vertexProjCoords.x /= vertexProjCoords.w;
+			vertexProjCoords.y /= vertexProjCoords.w;
+			vertexProjCoords.z /= vertexProjCoords.w;
+		}
+
+		vertexProjCoords.x *= g_Framebuffer.Width() / 2.0f;
+		vertexProjCoords.x += (g_Framebuffer.Width() / 2.0f);
+		vertexProjCoords.y *= g_Framebuffer.Height() / 2.0f;
+		vertexProjCoords.y += (g_Framebuffer.Height() / 2.0f);
 		
-		transformedPoint -= cameraPosition;*/
-		modelTransformedVerticesDepths[i] = transformedPoint.z;
-		modelProjectedVertices[i] = Project(transformedPoint);
-		modelProjectedVertices[i].x += g_Framebuffer.Width() / 2;
-		modelProjectedVertices[i].y += g_Framebuffer.Height() / 2;
+		modelProjectedVertices[i].x = vertexProjCoords.x;
+		modelProjectedVertices[i].y = vertexProjCoords.y;
 	}
 }
 
