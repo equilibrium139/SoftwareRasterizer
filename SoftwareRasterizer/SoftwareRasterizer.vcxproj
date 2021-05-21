@@ -155,6 +155,7 @@
   <ItemGroup>
     <ClInclude Include="Display.h" />
     <ClInclude Include="Framebuffer.h" />
+    <ClInclude Include="Light.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="Triangle.h" />

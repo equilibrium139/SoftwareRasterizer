@@ -22,16 +22,12 @@ inline Vec2 operator-(Vec2 a, Vec2 b) {
 	return { a.x - b.x, a.y - b.y };
 }
 
-struct Vec4 {
-	float x, y, z, w;
-};
-
 class Vec3
 {
 public:
 	float x, y, z;
 
-	Vec3() {}
+	Vec3() = default;
 	Vec3(float x, float y, float z) : x(x), y(y), z(z) {}
 
 	Vec3 operator-() const { return Vec3{ -x, -y, -z }; }
@@ -179,5 +175,16 @@ inline Vec3 RotateZ(Vec3 point, float angle) {
 		point.z
 	};
 }
+
+struct Vec4 {
+	float x, y, z, w;
+};
+
+inline Vec4 ToHomogenous(Vec3 v, float w) {
+	return {
+		v.x, v.y, v.z, w
+	};
+}
+
 
 #endif // VECTOR_H

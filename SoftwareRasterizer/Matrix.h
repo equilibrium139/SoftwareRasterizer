@@ -123,11 +123,23 @@ inline Mat4 Rotation(Vec3 vec) {
 
 inline Mat4 Perspective(float inverseAspectRatio, float fovRadians, float zNear, float zFar) {
 	// Scales x and y and normalizes z values from [zNear, zFar] to [0, zFar] and puts z in w
-	float inverseTanFov = 1.0f / std::tan(fovRadians / 2);
+	// This allows z to be saved even after perspective division so it can be used for depth 
+	// testing later on.
+	float inverseTanFov = 1.0f / std::tan(fovRadians / 2); // cam to projection plane distance
 	return {
 		inverseAspectRatio * inverseTanFov, 0,				0,						0,
 		0,									inverseTanFov,  0,						0,
 		0,									0,				zFar / (zFar - zNear), -((zNear * zFar) / (zFar - zNear)),
 		0,									0,				1,						0
 	};
+}
+
+inline Vec4 PerspectiveProject(const Mat4& projMat, Vec4 vec) {
+	auto product = projMat * vec;
+	if (product.w != 0.0f) {
+		product.x /= product.w;
+		product.y /= product.w;
+		product.z /= product.w;
+	}
+	return product;
 }
