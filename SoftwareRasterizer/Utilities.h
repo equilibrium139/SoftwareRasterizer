@@ -5,10 +5,12 @@
 #include <limits>
 #include <random>
 
+using Color = std::uint32_t;
+
 const float infinity = std::numeric_limits<float>::infinity();
 const float pi = 3.1415926535897932385f;
 
-inline float DegreesToRadians(float degrees) {
+inline float Radians(float degrees) {
 	return degrees * pi / 180.0f;
 }
 
@@ -23,7 +25,7 @@ inline float RandomFloat(float min, float max) {
 	return min + RandomFloat() * (max - min);
 }
 
-float Clamp(float x, float min, float max) {
+inline float Clamp(float x, float min, float max) {
 	if (x < min) return min;
 	if (x > max) return max;
 	return x;

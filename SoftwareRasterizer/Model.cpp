@@ -4,8 +4,8 @@
 #include <fstream>
 #include <string>
 
-Vec3 cubeVertices[8] = {
-	{-1,  -1,  -1}, 
+std::vector<Vec3> cubeVertices = {
+	{-1,  -1,  -1},
 	{-1,   1,  -1},
 	{ 1,   1,  -1},
 	{ 1,  -1,  -1},
@@ -16,14 +16,16 @@ Vec3 cubeVertices[8] = {
 	{-1,  -1,   1}
 };
 
-Face cubeFaces[12] = {
-	{0, 1, 2, 0xFFFF0000}, {0, 2, 3, 0xFFFF0000 }, // Front
-	{3, 2, 5, 0xFF00FF00 }, {3, 5, 4, 0xFF00FF00 }, // Left
-	{4, 5, 6, 0xFF0000FF }, {4, 6, 7, 0xFF0000FF }, // Back
-	{7, 6, 1, 0xFFFFFF00 }, {7, 1, 0, 0xFFFFFF00 }, // Right
-	{1, 6, 5, 0xFFFF00FF }, {1, 5, 2, 0xFFFF00FF }, // Top
-	{3, 4, 7, 0xFF00FFFF }, {3, 7, 0, 0xFF00FFFF }  // Bottom
+std::vector<Face> cubeFaces = {
+	{0, 1, 2, {0, 0}, {0, 1}, {1, 1}, 0xFFFF0000},  {0, 2, 3, {0, 0}, {1, 1}, {1, 0}, 0xFFFF0000 }, // Front
+	{3, 2, 5, {0, 0}, {0, 1}, {1, 1}, 0xFF00FF00},  {3, 5, 4, {0, 0}, {1, 1}, {1, 0}, 0xFF00FF00 }, // Right
+	{4, 5, 6, {0, 0}, {0, 1}, {1, 1}, 0xFF0000FF},  {4, 6, 7, {0, 0}, {1, 1}, {1, 0}, 0xFF0000FF }, // Back
+	{7, 6, 1, {0, 0}, {0, 1}, {1, 1}, 0xFFFFFF00},  {7, 1, 0, {0, 0}, {1, 1}, {1, 0}, 0xFFFFFF00 }, // Left
+	{1, 6, 5, {0, 0}, {0, 1}, {1, 1}, 0xFFFF00FF},  {1, 5, 2, {0, 0}, {1, 1}, {1, 0}, 0xFFFF00FF }, // Top
+	{3, 4, 7, {0, 0}, {0, 1}, {1, 1}, 0xFF00FFFF},  {3, 7, 0, {0, 0}, {1, 1}, {1, 0}, 0xFF00FFFF }  // Bottom
 };
+
+Model cube = Model( cubeVertices, cubeFaces );
 
 Model::Model(const char* path)
 {
@@ -51,6 +53,7 @@ Model::Model(const char* path)
 			face.a--;
 			face.b--;
 			face.c--;
+			face.color = 0xFFFFFFFF;
 		}
 	}
 }

@@ -17,8 +17,6 @@ extern Framebuffer g_Framebuffer;
 
 bool InitializeWindow();
 void DestroyWindow();
-
-void DrawGrid();
 void RenderColorBuffer();
 
 #endif DISPLAY_H

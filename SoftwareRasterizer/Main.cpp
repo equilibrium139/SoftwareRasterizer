@@ -3,7 +3,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <ctime>
 #include <array>
 #include <iostream>
 #include <vector>
@@ -13,44 +12,38 @@
 #include "Light.h"
 #include "Model.h"
 #include "Matrix.h"
+#include "Texture.h"
 
 bool g_IsRunning = false;
 bool g_BackfaceCullingEnabled = true;
-bool g_DisplayNormals = false;
 Vec3 cameraPosition = { 0, 0, -4 };
-Model model("Models/african_head.obj");
+Model model("Models/f22.obj");
 std::vector<Vec2> modelScreenSpaceVertices;
 std::vector<Vec3> modelViewSpaceVertices;
+std::vector<Vec3> modelClipSpaceVertices;
 std::uint32_t previousFrameTime = 0;
-DirectionalLight sun{ Normalize({1, -1, -1}) };
+DirectionalLight sun{ Normalize({0, 0, 1}) };
+Texture modelTexture(64, 64);
 
 enum class RenderMode {
 	WireframeAndVertices,
 	Wireframe,
 	Filled,
-	FilledAndWireframe
+	FilledAndWireframe,
+	Textured,
+	TexturedWireframe
 };
 
-RenderMode g_RenderMode = RenderMode::Filled;
+RenderMode g_RenderMode = RenderMode::Textured;
 
 void Setup() {
 	g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, g_Framebuffer.Width(), g_Framebuffer.Height());
-
-	// cube
-	modelScreenSpaceVertices.resize(8);
-	modelViewSpaceVertices.resize(8);
-	model.vertices.resize(8);
-	model.faces.resize(12);
-	std::copy(cubeVertices, cubeVertices + 8, model.vertices.begin());
-	std::copy(cubeFaces, cubeFaces + 12, model.faces.begin());
-
-	// head
-	/*modelScreenSpaceVertices.resize(model.vertices.size());
-	modelViewSpaceVertices.resize(model.vertices.size());*/
-
-	/*for (Vec3& vertex : model.vertices) {
-		vertex.y = -vertex.y;
-	}*/
+	model = cube;
+	modelScreenSpaceVertices.resize(model.vertices.size());
+	modelViewSpaceVertices.resize(model.vertices.size());
+	modelClipSpaceVertices.resize(model.vertices.size());
+	std::uint32_t* tex = (std::uint32_t*)REDBRICK_TEXTURE;
+	modelTexture.buffer = std::vector<std::uint32_t>(tex, tex + 4096);
 }
 
 void ProcessInput() {
@@ -68,16 +61,13 @@ void ProcessInput() {
 				case SDLK_2: g_RenderMode = RenderMode::Wireframe;  break;
 				case SDLK_3: g_RenderMode = RenderMode::Filled;  break;
 				case SDLK_4: g_RenderMode = RenderMode::FilledAndWireframe; break;
+				case SDLK_5: g_RenderMode = RenderMode::Textured; break;
+				case SDLK_6: g_RenderMode = RenderMode::TexturedWireframe; break;
 				case SDLK_c: g_BackfaceCullingEnabled = !g_BackfaceCullingEnabled; break;
-				case SDLK_n: g_DisplayNormals = !g_DisplayNormals; break;
 			}
 			if (event.key.keysym.sym == SDLK_ESCAPE) { g_IsRunning = false; }
 			break;
 	}
-}
-
-float Radians(float degrees) {
-	return 0.01745329251f * degrees;
 }
 
 void Update() {
@@ -88,13 +78,15 @@ void Update() {
 		SDL_Delay(waitTime);
 	}
 
-	std::cout << SDL_GetTicks() - previousFrameTime << '\n';
+	if (auto frameTime = SDL_GetTicks() - previousFrameTime; frameTime > 34) {
+		std::cout << frameTime << '\n';
+	}
 
 	previousFrameTime = SDL_GetTicks();
 
-	model.rotation.z += 0.01f;
 	model.rotation.x += 0.01f;
 	model.rotation.y += 0.01f;
+	model.rotation.z += 0.01f;
 	Mat4 worldMatrix = model.GetModelMatrix();
 	Mat4 viewMatrix = Translation(-cameraPosition);
 	Mat4 projMatrix = Perspective((float)g_Framebuffer.Height() / (float)g_Framebuffer.Width(), M_PI / 3.0f, 0.1f, 100.0f);
@@ -104,14 +96,9 @@ void Update() {
 		modelViewSpaceVertices[i] = worldViewMatrix * model.vertices[i];
 		auto homogenousVertex = ToHomogenous(modelViewSpaceVertices[i], 1.0f);
 		auto vertexProjCoords = PerspectiveProject(projMatrix, homogenousVertex);
-
-		vertexProjCoords.x *= g_Framebuffer.Width() / 2.0f;
-		vertexProjCoords.x += (g_Framebuffer.Width() / 2.0f);
-		vertexProjCoords.y *= g_Framebuffer.Height() / 2.0f;
-		vertexProjCoords.y += (g_Framebuffer.Height() / 2.0f);
-		
-		modelScreenSpaceVertices[i].x = vertexProjCoords.x;
-		modelScreenSpaceVertices[i].y = (g_Framebuffer.Height() - 1) - vertexProjCoords.y;
+		modelClipSpaceVertices[i] = { vertexProjCoords.x , vertexProjCoords.y, vertexProjCoords.z };
+		modelScreenSpaceVertices[i].x = (vertexProjCoords.x * g_Framebuffer.Width() / 2.0f) + (g_Framebuffer.Width() / 2.0f);
+		modelScreenSpaceVertices[i].y = (g_Framebuffer.Height() - 1) - ((vertexProjCoords.y * g_Framebuffer.Height() / 2.0f) + (g_Framebuffer.Height() / 2.0f));
 	}
 }
 
@@ -135,21 +122,12 @@ void Render() {
 			return face1AvgDepth > face2AvgDepth;
 		});
 
-	std::uint32_t index = 0;
 	for (Face& face : model.faces) {
-		Vec2 a = modelScreenSpaceVertices[face.a];
-		Vec2 b = modelScreenSpaceVertices[face.b];
-		Vec2 c = modelScreenSpaceVertices[face.c];
+		Triangle screenSpaceTriangle { modelScreenSpaceVertices[face.a], 
+									   modelScreenSpaceVertices[face.b],
+			                           modelScreenSpaceVertices[face.c] };
 
-		Vec2 ab = b - a;
-		Vec2 bc = c - b;
-
-		// auto signedScaledArea = (a.x * b.y - a.y * b.x) + (b.x * c.y - b.y * c.x) + (c.x * a.y - c.y * a.x); // = triangle area * 2
-		bool frontFacing = (ab.x * bc.y - ab.y * bc.x) > 0;
-		if (!g_BackfaceCullingEnabled || frontFacing) {
-			Vec2i ai{ a.x, a.y };
-			Vec2i bi{ b.x, b.y };
-			Vec2i ci{ c.x, c.y };
+		if (!g_BackfaceCullingEnabled || IsFrontFacingScreenSpace(screenSpaceTriangle)) {
 			auto a = modelViewSpaceVertices[face.a];
 			auto b = modelViewSpaceVertices[face.b];
 			auto c = modelViewSpaceVertices[face.c];
@@ -158,33 +136,37 @@ void Render() {
 			auto bc = c - b;
 			auto normal = Normalize(Cross(ab, bc));
 			auto intensity = std::max(Dot(normal, -sun.dir), 0.1f);
-			auto color = face.color;
-			auto alpha = color & 0xFF000000;
-			std::uint32_t r = (color & 0x00FF0000) * intensity;
-			std::uint32_t g = (color & 0x0000FF00) * intensity;
-			std::uint32_t blue = (color & 0x000000FF) * intensity;
-			color = alpha | (r & 0x00FF0000) | (g & 0x0000FF00) | (blue & 0x000000FF);
+			auto color = ApplyIntensity(face.color, intensity);
 
 			switch (g_RenderMode) {
-				case RenderMode::Wireframe: g_Framebuffer.DrawTriangle(ai, bi, ci, 0xFFFFFFFF); break;
-				case RenderMode::WireframeAndVertices: 
-					g_Framebuffer.DrawTriangle(ai, bi, ci, 0xFFFFFFFF); 
-					g_Framebuffer.DrawRect(a.x - 2, a.y - 2, 4, 4, 0xFFFF0000);
-					g_Framebuffer.DrawRect(b.x - 2, b.y - 2, 4, 4, 0xFFFF0000);
-					g_Framebuffer.DrawRect(c.x - 2, c.y - 2, 4, 4, 0xFFFF0000);
-					break;
-				case RenderMode::Filled: g_Framebuffer.DrawFilledTriangle(ai, bi, ci, color); break;
-				case RenderMode::FilledAndWireframe: 
-					g_Framebuffer.DrawFilledTriangle(ai, bi, ci, color);
-					g_Framebuffer.DrawTriangle(ai, bi, ci, 0xFFFFFFFF);
-					break;
-			}
+				case RenderMode::Wireframe: 
+					g_Framebuffer.DrawTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, 0xFFFFFFFF); break;
 
-			if (g_DisplayNormals) {
-				
+				case RenderMode::WireframeAndVertices: 
+					g_Framebuffer.DrawTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, 0xFFFFFFFF); 
+					g_Framebuffer.DrawRect(screenSpaceTriangle.a.x - 2, screenSpaceTriangle.a.y - 2, 4, 4, 0xFFFF0000);
+					g_Framebuffer.DrawRect(screenSpaceTriangle.b.x - 2, screenSpaceTriangle.b.y - 2, 4, 4, 0xFFFF0000);
+					g_Framebuffer.DrawRect(screenSpaceTriangle.c.x - 2, screenSpaceTriangle.c.y - 2, 4, 4, 0xFFFF0000);
+					break;
+
+				case RenderMode::Filled: 
+					g_Framebuffer.DrawFilledTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, color); break;
+
+				case RenderMode::FilledAndWireframe: 
+					g_Framebuffer.DrawFilledTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, color);
+					g_Framebuffer.DrawTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, 0xFFFFFFFF);
+					break;
+
+				case RenderMode::Textured:
+					g_Framebuffer.DrawTexturedTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, face.aUV, face.bUV, face.cUV, modelTexture);
+					break;
+
+				case RenderMode::TexturedWireframe:
+					g_Framebuffer.DrawTexturedTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, face.aUV, face.bUV, face.cUV, modelTexture);
+					g_Framebuffer.DrawTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, 0xFFFFFFFF);
+					break;
 			}
 		}
-		index++;
 	}
 	
 	RenderColorBuffer();

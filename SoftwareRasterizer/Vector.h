@@ -4,22 +4,31 @@
 #include <cmath>
 #include <iostream>
 
-using Color = std::uint32_t;
-
 struct Vec2 {
-	float x, y;
+	union {
+		struct {
+			float x, y;
+		};
+		struct {
+			float u, v;
+		};
+	};
 };
 
-struct Vec2i {
-	int x, y;
-};
-
-inline bool operator==(Vec2i lhs, Vec2i rhs) {
+inline bool operator==(Vec2 lhs, Vec2 rhs) {
 	return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
 inline Vec2 operator-(Vec2 a, Vec2 b) {
 	return { a.x - b.x, a.y - b.y };
+}
+
+inline Vec2 operator*(float lhs, Vec2 rhs) {
+	return { rhs.x * lhs, rhs.y * lhs };
+}
+
+inline Vec2 operator+(Vec2 lhs, Vec2 rhs) {
+	return { lhs.x + rhs.x, lhs.y + rhs.y };
 }
 
 class Vec3

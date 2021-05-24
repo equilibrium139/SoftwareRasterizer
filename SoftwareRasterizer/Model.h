@@ -13,12 +13,14 @@ struct Model {
 	Vec3 rotation = { 0, 0, 0 };
 	Vec3 translation = { 0, 0, 0 };
 	Model(const char* path);
+	Model(const std::vector<Vec3>& vertices, const std::vector<Face>& faces) : vertices(vertices), faces(faces) {}
 	Mat4 GetModelMatrix() {
 		return Translation(translation) * Rotation(rotation) * Scaling(scale);
 	}
 };
 
-extern Vec3 cubeVertices[8];
-extern Face cubeFaces[12];
+extern std::vector<Vec3> cubeVertices;
+extern std::vector<Face> cubeFaces;
+extern Model cube;
 
 #endif // !MODEL_H

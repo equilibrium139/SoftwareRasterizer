@@ -2,6 +2,8 @@
 #define FRAMEBUFFER_H
 
 #include "Vector.h"
+#include "Utilities.h"
+#include "Texture.h"
 #include <vector>
 #include <utility>
 #include <limits>
@@ -36,18 +38,79 @@ public:
 		}
 	}
 
-	void DrawPixel(Vec2i point, Color color) {
+	void DrawPixel(Vec2 point, Color color) {
 		DrawPixel(point.x, point.y, color);
 	}
 
-	void DrawLine(Vec2i a, Vec2i b, Color color)
+	void DrawLine(Vec2 a, Vec2 b, Color color)
 	{
 		DrawLine(a.x, a.y, b.x, b.y, color);
 	}
 
-	void DrawFilledTriangle(Vec2i a, Vec2i b, Vec2i c, Color color);
+	void DrawFilledTriangle(Vec2 a, Vec2 b, Vec2 c, Color color) {
+		// Sort by y value so a.y <= b.y <= c.y 
+		if (a.y > b.y) std::swap(a, b);
+		if (b.y > c.y) std::swap(b, c);
+		if (a.y > b.y) std::swap(a, b);
 
-	void DrawTriangle(Vec2i a, Vec2i b, Vec2i c, Color color) {
+		DrawLineImpl<true>(a, b, color);
+		DrawLineImpl<true>(a, c, color);
+		DrawLineImpl<true>(b, c, color);
+
+		for (int y = a.y; y <= c.y; y++) {
+			DrawHorizontalLine(y, minMaxXValues[y].first, minMaxXValues[y].second, color);
+			minMaxXValues[y].first = INT_MAX;
+			minMaxXValues[y].second = INT_MIN;
+		}
+	}
+
+	void DrawTexturedTriangle(Vec2 a, Vec2 b, Vec2 c, Vec2 aUV, Vec2 bUV, Vec2 cUV, const Texture& texture) {
+		// Sort by y value so a.y <= b.y <= c.y 
+		if (a.y > b.y) {
+			std::swap(a, b);
+			std::swap(aUV, bUV);
+		}
+		if (b.y > c.y) {
+			std::swap(b, c);
+			std::swap(bUV, cUV);
+		}
+		if (a.y > b.y) {
+			std::swap(a, b);
+			std::swap(aUV, bUV);
+		}
+
+		DrawLineImpl<true>(a, b, 0xFFFF0000);
+		DrawLineImpl<true>(a, c, 0xFFFF0000);
+		DrawLineImpl<true>(b, c, 0xFFFF0000);
+
+		const auto ab = b - a;
+		const auto bc = c - b;
+		const auto inverseTriangleAreaTimes2 = 1.0f / (ab.x * bc.y - ab.y * bc.x);
+		const auto ac = c - a;
+
+		for (int y = a.y; y <= c.y; y++) {
+			for (int x = minMaxXValues[y].first; x <= minMaxXValues[y].second; x++) {
+				const auto p = Vec2{ (float)x, (float)y };
+
+				const auto bp = p - b;
+				const auto triangleBPCAreaTimes2 = (bc.x * bp.y - bc.y * bp.x);
+				auto alpha = triangleBPCAreaTimes2 * inverseTriangleAreaTimes2;
+
+				auto ap = p - a;
+				auto triangleAPCAreaTimes2 = (ap.x * ac.y - ap.y * ac.x);
+				auto beta = triangleAPCAreaTimes2 * inverseTriangleAreaTimes2;
+
+				auto gamma = 1.0f - alpha - beta;
+
+				auto interpolatedTexCoord = alpha * aUV + beta * bUV + gamma * cUV;
+				DrawPixel(x, y, texture(interpolatedTexCoord));
+			}
+			minMaxXValues[y].first = INT_MAX;
+			minMaxXValues[y].second = INT_MIN;
+		}
+	}
+
+	void DrawTriangle(Vec2 a, Vec2 b, Vec2 c, Color color) {
 		DrawLine(a, b, color);
 		DrawLine(a, c, color);
 		DrawLine(b, c, color);
@@ -189,12 +252,9 @@ private:
 	}
 
 	template<bool setMinMax> 
-	void DrawLineImpl(Vec2i a, Vec2i b, Color color) {
+	void DrawLineImpl(Vec2 a, Vec2 b, Color color) {
 		DrawLineImpl<setMinMax>(a.x, a.y, b.x, b.y, color);
 	}
-
-	void FillFlatBottomTriangle(Vec2 top, int bottomY, int x0, int x1, Color color);
-	void FillFlatTopTriangle(Vec2 bottom, int topY, int x0, int x1, Color color);
 
 	int width, height;
 	std::vector<Color> colorBuffer;
