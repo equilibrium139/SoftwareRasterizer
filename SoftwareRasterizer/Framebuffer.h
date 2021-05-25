@@ -64,7 +64,9 @@ public:
 		}
 	}
 
-	void DrawTexturedTriangle(Vec2 a, Vec2 b, Vec2 c, Vec2 aUV, Vec2 bUV, Vec2 cUV, const Texture& texture) {
+	// a.x and a.y are screen space coordinates, and a.z is the inverse of a's z coordinate in view space (1 / a.w after perspective matrix)
+	// Same goes for b and c. This third value is used to achieve perspective correct interpolation.
+	void DrawTexturedTriangle(Vec3 a, Vec3 b, Vec3 c, Vec2 aUV, Vec2 bUV, Vec2 cUV, const Texture& texture) {
 		// Sort by y value so a.y <= b.y <= c.y 
 		if (a.y > b.y) {
 			std::swap(a, b);
@@ -79,30 +81,41 @@ public:
 			std::swap(aUV, bUV);
 		}
 
-		DrawLineImpl<true>(a, b, 0xFFFF0000);
-		DrawLineImpl<true>(a, c, 0xFFFF0000);
-		DrawLineImpl<true>(b, c, 0xFFFF0000);
+		DrawLineImpl<true>(a.x, a.y, b.x, b.y, 0xFFFF0000);
+		DrawLineImpl<true>(a.x, a.y, c.x, c.y, 0xFFFF0000);
+		DrawLineImpl<true>(b.x, b.y, c.x, c.y, 0xFFFF0000);
 
 		const auto ab = b - a;
 		const auto bc = c - b;
 		const auto inverseTriangleAreaTimes2 = 1.0f / (ab.x * bc.y - ab.y * bc.x);
 		const auto ac = c - a;
 
+		const auto aInverseDepthTimesUV = a.z * aUV;
+		const auto bInverseDepthTimesUV = b.z * bUV;
+		const auto cInverseDepthTimesUV = c.z * cUV;
+
 		for (int y = a.y; y <= c.y; y++) {
-			for (int x = minMaxXValues[y].first; x <= minMaxXValues[y].second; x++) {
-				const auto p = Vec2{ (float)x, (float)y };
+			const int xStart = minMaxXValues[y].first;
+			const int xEnd = minMaxXValues[y].second;
+			for (int x = xStart; x <= xEnd; x++) {
+				const auto p = Vec3{ (float)x, (float)y, 0.0f };
 
 				const auto bp = p - b;
 				const auto triangleBPCAreaTimes2 = (bc.x * bp.y - bc.y * bp.x);
-				auto alpha = triangleBPCAreaTimes2 * inverseTriangleAreaTimes2;
+				const auto alpha = triangleBPCAreaTimes2 * inverseTriangleAreaTimes2;
 
-				auto ap = p - a;
-				auto triangleAPCAreaTimes2 = (ap.x * ac.y - ap.y * ac.x);
-				auto beta = triangleAPCAreaTimes2 * inverseTriangleAreaTimes2;
+				const auto ap = p - a;
+				const auto triangleAPCAreaTimes2 = (ap.x * ac.y - ap.y * ac.x);
+				const auto beta = triangleAPCAreaTimes2 * inverseTriangleAreaTimes2;
 
-				auto gamma = 1.0f - alpha - beta;
+				const auto gamma = 1.0f - alpha - beta;
 
-				auto interpolatedTexCoord = alpha * aUV + beta * bUV + gamma * cUV;
+				// auto interpolatedTexCoord = alpha * a.z * aUV + beta * b.z * bUV + gamma * c.z * cUV;
+				auto interpolatedTexCoord = alpha * aInverseDepthTimesUV + beta * bInverseDepthTimesUV + gamma * cInverseDepthTimesUV;
+				const auto interpolatedInverseZ = alpha * a.z + beta * b.z + gamma * c.z;
+				const auto interpolatedZ = 1.0f / interpolatedInverseZ;
+				interpolatedTexCoord *= interpolatedZ;
+
 				DrawPixel(x, y, texture(interpolatedTexCoord));
 			}
 			minMaxXValues[y].first = INT_MAX;

@@ -13,6 +13,12 @@ struct Vec2 {
 			float u, v;
 		};
 	};
+
+	Vec2& operator*=(float rhs) {
+		x *= rhs;
+		y *= rhs;
+		return *this;
+	}
 };
 
 inline bool operator==(Vec2 lhs, Vec2 rhs) {

@@ -18,7 +18,7 @@ bool g_IsRunning = false;
 bool g_BackfaceCullingEnabled = true;
 Vec3 cameraPosition = { 0, 0, -4 };
 Model model("Models/f22.obj");
-std::vector<Vec2> modelScreenSpaceVertices;
+std::vector<Vec3> modelScreenSpaceVertices; // z = 1 / w of vertex in after perspective transformation. Necessary for perspective correct interpolation
 std::vector<Vec3> modelViewSpaceVertices;
 std::vector<Vec3> modelClipSpaceVertices;
 std::uint32_t previousFrameTime = 0;
@@ -96,9 +96,13 @@ void Update() {
 		modelViewSpaceVertices[i] = worldViewMatrix * model.vertices[i];
 		auto homogenousVertex = ToHomogenous(modelViewSpaceVertices[i], 1.0f);
 		auto vertexProjCoords = PerspectiveProject(projMatrix, homogenousVertex);
+		// TODO clip before division by w. Useless to perspective divide vertices which will be discarded
 		modelClipSpaceVertices[i] = { vertexProjCoords.x , vertexProjCoords.y, vertexProjCoords.z };
+
 		modelScreenSpaceVertices[i].x = (vertexProjCoords.x * g_Framebuffer.Width() / 2.0f) + (g_Framebuffer.Width() / 2.0f);
-		modelScreenSpaceVertices[i].y = (g_Framebuffer.Height() - 1) - ((vertexProjCoords.y * g_Framebuffer.Height() / 2.0f) + (g_Framebuffer.Height() / 2.0f));
+		// Invert y because it is top down in screen space but bottom up in view space
+		modelScreenSpaceVertices[i].y = (g_Framebuffer.Height() - 1) - ((vertexProjCoords.y * g_Framebuffer.Height() / 2.0f) + (g_Framebuffer.Height() / 2.0f)); 
+		modelScreenSpaceVertices[i].z = 1.0f / vertexProjCoords.w; // Useful for perspective correct interpolation 
 	}
 }
 
@@ -140,21 +144,28 @@ void Render() {
 
 			switch (g_RenderMode) {
 				case RenderMode::Wireframe: 
-					g_Framebuffer.DrawTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, 0xFFFFFFFF); break;
+					g_Framebuffer.DrawTriangle({ screenSpaceTriangle.a.x, screenSpaceTriangle.a.y }, { screenSpaceTriangle.b.x, screenSpaceTriangle.b.y }, 
+											   { screenSpaceTriangle.c.x, screenSpaceTriangle.c.y }, 0xFFFFFFFF); 
+					break;
 
 				case RenderMode::WireframeAndVertices: 
-					g_Framebuffer.DrawTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, 0xFFFFFFFF); 
+					g_Framebuffer.DrawTriangle({ screenSpaceTriangle.a.x, screenSpaceTriangle.a.y }, { screenSpaceTriangle.b.x, screenSpaceTriangle.b.y },
+											   { screenSpaceTriangle.c.x, screenSpaceTriangle.c.y }, 0xFFFFFFFF);
 					g_Framebuffer.DrawRect(screenSpaceTriangle.a.x - 2, screenSpaceTriangle.a.y - 2, 4, 4, 0xFFFF0000);
 					g_Framebuffer.DrawRect(screenSpaceTriangle.b.x - 2, screenSpaceTriangle.b.y - 2, 4, 4, 0xFFFF0000);
 					g_Framebuffer.DrawRect(screenSpaceTriangle.c.x - 2, screenSpaceTriangle.c.y - 2, 4, 4, 0xFFFF0000);
 					break;
 
 				case RenderMode::Filled: 
-					g_Framebuffer.DrawFilledTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, color); break;
+					g_Framebuffer.DrawFilledTriangle({ screenSpaceTriangle.a.x, screenSpaceTriangle.a.y }, { screenSpaceTriangle.b.x, screenSpaceTriangle.b.y },
+													 { screenSpaceTriangle.c.x, screenSpaceTriangle.c.y }, color);
+					break;
 
 				case RenderMode::FilledAndWireframe: 
-					g_Framebuffer.DrawFilledTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, color);
-					g_Framebuffer.DrawTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, 0xFFFFFFFF);
+					g_Framebuffer.DrawFilledTriangle({ screenSpaceTriangle.a.x, screenSpaceTriangle.a.y }, { screenSpaceTriangle.b.x, screenSpaceTriangle.b.y },
+													 { screenSpaceTriangle.c.x, screenSpaceTriangle.c.y }, color);
+					g_Framebuffer.DrawTriangle({ screenSpaceTriangle.a.x, screenSpaceTriangle.a.y }, { screenSpaceTriangle.b.x, screenSpaceTriangle.b.y },
+													 { screenSpaceTriangle.c.x, screenSpaceTriangle.c.y }, 0xFFFFFFFF);
 					break;
 
 				case RenderMode::Textured:
@@ -163,7 +174,8 @@ void Render() {
 
 				case RenderMode::TexturedWireframe:
 					g_Framebuffer.DrawTexturedTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, face.aUV, face.bUV, face.cUV, modelTexture);
-					g_Framebuffer.DrawTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, 0xFFFFFFFF);
+					g_Framebuffer.DrawTriangle({ screenSpaceTriangle.a.x, screenSpaceTriangle.a.y }, { screenSpaceTriangle.b.x, screenSpaceTriangle.b.y },
+											   { screenSpaceTriangle.c.x, screenSpaceTriangle.c.y }, 0xFFFFFFFF);
 					break;
 			}
 		}

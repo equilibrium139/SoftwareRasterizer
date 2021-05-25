@@ -5,7 +5,7 @@
 #include "Vector.h"
 
 struct Triangle {
-	Vec2 a, b, c;
+	Vec3 a, b, c;
 };
 
 struct Face {

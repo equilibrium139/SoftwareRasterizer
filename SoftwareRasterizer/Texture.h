@@ -11,7 +11,7 @@ struct Texture {
 		auto x = int(uv.u * width);
 		auto y = int(uv.v * height);
 		auto index = std::size_t(y * width + x);
-		index = std::clamp(index, std::size_t(0), buffer.size() - 1);
+		if (index > buffer.size() - 1) index = buffer.size() - 1;
 		return buffer[index];
 	}
 	std::vector<Color> buffer;
