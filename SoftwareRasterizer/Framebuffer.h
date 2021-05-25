@@ -42,11 +42,12 @@ public:
 		DrawPixel(point.x, point.y, color);
 	}
 
-	void DrawLine(Vec2 a, Vec2 b, Color color)
-	{
+	void DrawLine(Vec2 a, Vec2 b, Color color) {
 		DrawLine(a.x, a.y, b.x, b.y, color);
 	}
 
+	// 1. For each row y spanned by the triangle, store leftmost and rightmost pixels at that row.
+	// 2. Connect leftmost and rightmost pixels at each row y
 	void DrawFilledTriangle(Vec2 a, Vec2 b, Vec2 c, Color color) {
 		// Sort by y value so a.y <= b.y <= c.y 
 		if (a.y > b.y) std::swap(a, b);
@@ -59,13 +60,14 @@ public:
 
 		for (int y = a.y; y <= c.y; y++) {
 			DrawHorizontalLine(y, minMaxXValues[y].first, minMaxXValues[y].second, color);
+			// Reset values for next triangle draw.
 			minMaxXValues[y].first = INT_MAX;
 			minMaxXValues[y].second = INT_MIN;
 		}
 	}
 
-	// a.x and a.y are screen space coordinates, and a.z is the inverse of a's z coordinate in view space (1 / a.w after perspective matrix)
-	// Same goes for b and c. This third value is used to achieve perspective correct interpolation.
+	// a.x and a.y are screen space coordinates, and a.z is the inverse of a's z coordinate in view space (1 / a.w after multiplication by perspective matrix)
+	// Same goes for b and c. This third 1/w value is used to achieve perspective correct interpolation.
 	void DrawTexturedTriangle(Vec3 a, Vec3 b, Vec3 c, Vec2 aUV, Vec2 bUV, Vec2 cUV, const Texture& texture) {
 		// Sort by y value so a.y <= b.y <= c.y 
 		if (a.y > b.y) {
@@ -81,42 +83,50 @@ public:
 			std::swap(aUV, bUV);
 		}
 
-		DrawLineImpl<true>(a.x, a.y, b.x, b.y, 0xFFFF0000);
-		DrawLineImpl<true>(a.x, a.y, c.x, c.y, 0xFFFF0000);
-		DrawLineImpl<true>(b.x, b.y, c.x, c.y, 0xFFFF0000);
-
 		const auto ab = b - a;
 		const auto bc = c - b;
-		const auto inverseTriangleAreaTimes2 = 1.0f / (ab.x * bc.y - ab.y * bc.x);
+		const auto inverseTriangleAreaTimes2 = 1.0f / (ab.x * bc.y - ab.y * bc.x); 
 		const auto ac = c - a;
 
 		const auto aInverseDepthTimesUV = a.z * aUV;
 		const auto bInverseDepthTimesUV = b.z * bUV;
 		const auto cInverseDepthTimesUV = c.z * cUV;
 
+		DrawLineImpl<true>(a.x, a.y, b.x, b.y, 0xFFFF0000);
+		DrawLineImpl<true>(a.x, a.y, c.x, c.y, 0xFFFF0000);
+		DrawLineImpl<true>(b.x, b.y, c.x, c.y, 0xFFFF0000);
+
 		for (int y = a.y; y <= c.y; y++) {
 			const int xStart = minMaxXValues[y].first;
 			const int xEnd = minMaxXValues[y].second;
+			const auto p = Vec3{ (float)xStart, (float)y, 0.0f };
+			const auto bp = p - b;
+			const auto ap = p - a;
+			auto triangleBPCAreaTimes2 = (bc.x * bp.y - bc.y * bp.x);
+			auto triangleAPCAreaTimes2 = (ap.x * ac.y - ap.y * ac.x);
 			for (int x = xStart; x <= xEnd; x++) {
-				const auto p = Vec3{ (float)x, (float)y, 0.0f };
-
-				const auto bp = p - b;
-				const auto triangleBPCAreaTimes2 = (bc.x * bp.y - bc.y * bp.x);
 				const auto alpha = triangleBPCAreaTimes2 * inverseTriangleAreaTimes2;
 
-				const auto ap = p - a;
-				const auto triangleAPCAreaTimes2 = (ap.x * ac.y - ap.y * ac.x);
 				const auto beta = triangleAPCAreaTimes2 * inverseTriangleAreaTimes2;
 
 				const auto gamma = 1.0f - alpha - beta;
 
 				// auto interpolatedTexCoord = alpha * a.z * aUV + beta * b.z * bUV + gamma * c.z * cUV;
-				auto interpolatedTexCoord = alpha * aInverseDepthTimesUV + beta * bInverseDepthTimesUV + gamma * cInverseDepthTimesUV;
+				auto interpolatedTexCoordU = alpha * aInverseDepthTimesUV.u + beta * bInverseDepthTimesUV.u + gamma * cInverseDepthTimesUV.u;
+				auto interpolatedTexCoordV = alpha * aInverseDepthTimesUV.v + beta * bInverseDepthTimesUV.v + gamma * cInverseDepthTimesUV.v;
+				// auto interpolatedTexCoord = alpha * aInverseDepthTimesUV + beta * bInverseDepthTimesUV + gamma * cInverseDepthTimesUV;
 				const auto interpolatedInverseZ = alpha * a.z + beta * b.z + gamma * c.z;
 				const auto interpolatedZ = 1.0f / interpolatedInverseZ;
-				interpolatedTexCoord *= interpolatedZ;
+				interpolatedTexCoordU *= interpolatedZ;
+				interpolatedTexCoordV *= interpolatedZ;
 
-				DrawPixel(x, y, texture(interpolatedTexCoord));
+				DrawPixel(x, y, texture({ interpolatedTexCoordU, interpolatedTexCoordV }));
+
+				// These are the triangle areas for the next pixel in row y. They can be calculated 
+				// incrementally by simply considering that bp.x and ap.x increase by 1 and all other values 
+				// remain constant for the are formula above across this row of pixels.
+				triangleBPCAreaTimes2 -= bc.y;
+				triangleAPCAreaTimes2 += ac.y;
 			}
 			minMaxXValues[y].first = INT_MAX;
 			minMaxXValues[y].second = INT_MIN;
@@ -127,22 +137,6 @@ public:
 		DrawLine(a, b, color);
 		DrawLine(a, c, color);
 		DrawLine(b, c, color);
-	}
-
-	void DrawGrid() {
-		// Vertical lines
-		for (int x = 0; x < width; x += 10) {
-			for (int y = 0; y < height; y++) {
-				DrawPixel(x, y, 0xFFFFFFFF);
-			}
-		}
-
-		// Horizontal lines
-		for (int y = 0; y < height; y += 10) {
-			for (int x = 0; x < width; x++) {
-				DrawPixel(x, y, 0xFFFFFFFF);
-			}
-		}
 	}
 
 	const Color* ColorData() const { return colorBuffer.data(); }
@@ -171,6 +165,9 @@ private:
 		if (x > minMaxXValues[y].second) minMaxXValues[y].second = x;
 	}
 
+	// Template parameter determines whether we're actually drawing to the buffer (setMinMax = false)
+	// or if we're determining the left and right boundaries of the horizontal lines which a triangle is 
+	// made of (setMinMax = true)
 	template<bool setMinMax>
 	void DrawXMajorLine(int x0, int y0, int deltaX, int deltaY, bool incrX, Color color) {
 		int deltaYx2 = 2 * deltaY;
@@ -271,7 +268,11 @@ private:
 
 	int width, height;
 	std::vector<Color> colorBuffer;
-	std::vector<std::pair<int, int>> minMaxXValues; // used for triangle rasterization
+
+	// used for triangle rasterization. DrawLine<true>(...) sets the values in this array such that
+	// minMaxXValues[y].first and minMaxXValues[y].second are columns of leftmost and rightmost pixels 
+	// at row y. This enables us to rasterize the triangle by simply drawing horizontal lines.
+	std::vector<std::pair<int, int>> minMaxXValues = std::vector<std::pair<int, int>>(height); 
 };
 
 #endif // !FRAMEBUFFER_H
