@@ -105,16 +105,16 @@ public:
 			auto triangleBPCAreaTimes2 = (bc.x * bp.y - bc.y * bp.x);
 			auto triangleAPCAreaTimes2 = (ap.x * ac.y - ap.y * ac.x);
 			for (int x = xStart; x <= xEnd; x++) {
+				// Calculate barycentric coordinates
 				const auto alpha = triangleBPCAreaTimes2 * inverseTriangleAreaTimes2;
 
 				const auto beta = triangleAPCAreaTimes2 * inverseTriangleAreaTimes2;
 
 				const auto gamma = 1.0f - alpha - beta;
 
-				// auto interpolatedTexCoord = alpha * a.z * aUV + beta * b.z * bUV + gamma * c.z * cUV;
+				// Using Vec2 operations here makes frame time extremely slow in debug mode for some reason so using individual u and v scalars instead
 				auto interpolatedTexCoordU = alpha * aInverseDepthTimesUV.u + beta * bInverseDepthTimesUV.u + gamma * cInverseDepthTimesUV.u;
 				auto interpolatedTexCoordV = alpha * aInverseDepthTimesUV.v + beta * bInverseDepthTimesUV.v + gamma * cInverseDepthTimesUV.v;
-				// auto interpolatedTexCoord = alpha * aInverseDepthTimesUV + beta * bInverseDepthTimesUV + gamma * cInverseDepthTimesUV;
 				const auto interpolatedInverseZ = alpha * a.z + beta * b.z + gamma * c.z;
 				const auto interpolatedZ = 1.0f / interpolatedInverseZ;
 				interpolatedTexCoordU *= interpolatedZ;

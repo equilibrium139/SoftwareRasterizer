@@ -4,9 +4,11 @@
 #include <vector>
 #include "Utilities.h"
 #include "Vector.h"
+#include <optional>
 
 struct Texture {
 	Texture(int width, int height) : width(width), height(height), buffer((std::size_t)width * height) {}
+	Texture(Color* pixels, int width, int height) : width(width), height(height), buffer(pixels, pixels + (std::size_t)width * height) {}
 	Color operator()(Vec2 uv) const {
 		auto x = int(uv.u * width);
 		auto y = int(uv.v * height);
@@ -17,6 +19,8 @@ struct Texture {
 	std::vector<Color> buffer;
 	int width, height;
 };
+
+std::optional<Texture> textureFromFile(const char* path);
 
 extern const std::uint8_t REDBRICK_TEXTURE[];
 

@@ -1,5 +1,6 @@
 #include "Display.h"
 #include <iostream>
+#include <SDL_image.h>
 
 #include "Framebuffer.h"
 
@@ -16,6 +17,12 @@ void RenderColorBuffer() {
 bool InitializeWindow() {
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
 		std::cerr << "Error initializing SDL.\n";
+		return false;
+	}
+
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+	{
+		printf("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
 		return false;
 	}
 
@@ -40,11 +47,21 @@ bool InitializeWindow() {
 		return false;
 	}
 
+	int flags = IMG_INIT_PNG;
+	int initted = IMG_Init(flags);
+
+	if ((initted & flags) != flags) {
+		std::cerr << "Error initializing SDL_image.\n";
+		std::cerr << IMG_GetError() << '\n';
+		return false;
+	}
+
 	return true;
 }
 
 void DestroyWindow() {
 	SDL_DestroyRenderer(g_Renderer);
 	SDL_DestroyWindow(g_Window);
+	IMG_Quit();
 	SDL_Quit();
 }

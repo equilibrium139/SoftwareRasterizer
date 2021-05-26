@@ -23,7 +23,7 @@ std::vector<Vec3> modelViewSpaceVertices;
 std::vector<Vec3> modelClipSpaceVertices;
 std::uint32_t previousFrameTime = 0;
 DirectionalLight sun{ Normalize({0, 0, 1}) };
-Texture modelTexture(64, 64);
+auto modelTexture = textureFromFile("Textures/cube.png");
 
 enum class RenderMode {
 	WireframeAndVertices,
@@ -42,8 +42,6 @@ void Setup() {
 	modelScreenSpaceVertices.resize(model.vertices.size());
 	modelViewSpaceVertices.resize(model.vertices.size());
 	modelClipSpaceVertices.resize(model.vertices.size());
-	std::uint32_t* tex = (std::uint32_t*)REDBRICK_TEXTURE;
-	modelTexture.buffer = std::vector<std::uint32_t>(tex, tex + 4096);
 }
 
 void ProcessInput() {
@@ -169,11 +167,11 @@ void Render() {
 					break;
 
 				case RenderMode::Textured:
-					g_Framebuffer.DrawTexturedTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, face.aUV, face.bUV, face.cUV, modelTexture);
+					g_Framebuffer.DrawTexturedTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, face.aUV, face.bUV, face.cUV, *modelTexture);
 					break;
 
 				case RenderMode::TexturedWireframe:
-					g_Framebuffer.DrawTexturedTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, face.aUV, face.bUV, face.cUV, modelTexture);
+					g_Framebuffer.DrawTexturedTriangle(screenSpaceTriangle.a, screenSpaceTriangle.b, screenSpaceTriangle.c, face.aUV, face.bUV, face.cUV, *modelTexture);
 					g_Framebuffer.DrawTriangle({ screenSpaceTriangle.a.x, screenSpaceTriangle.a.y }, { screenSpaceTriangle.b.x, screenSpaceTriangle.b.y },
 											   { screenSpaceTriangle.c.x, screenSpaceTriangle.c.y }, 0xFFFFFFFF);
 					break;
