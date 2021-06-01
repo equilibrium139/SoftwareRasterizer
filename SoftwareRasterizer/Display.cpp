@@ -20,12 +20,6 @@ bool InitializeWindow() {
 		return false;
 	}
 
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
-	{
-		printf("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
-		return false;
-	}
-
 	SDL_DisplayMode displayMode;
 	SDL_GetCurrentDisplayMode(0, &displayMode);
 	g_Framebuffer.SetDimensions(displayMode.w, displayMode.h);
@@ -47,14 +41,13 @@ bool InitializeWindow() {
 		return false;
 	}
 
-	int flags = IMG_INIT_PNG;
-	int initted = IMG_Init(flags);
-
-	if ((initted & flags) != flags) {
+	if (int flags = IMG_INIT_PNG; (IMG_Init(flags) & flags) != flags) {
 		std::cerr << "Error initializing SDL_image.\n";
 		std::cerr << IMG_GetError() << '\n';
 		return false;
 	}
+
+	SDL_SetRelativeMouseMode(SDL_TRUE);
 
 	return true;
 }

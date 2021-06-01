@@ -1,6 +1,8 @@
-#pragma once
+#ifndef MATRIX_H
+#define MATRIX_H
 
 #include <cmath>
+#include "Vector.h"
 
 struct Mat4 {
 	float* operator[] (int i) { return m[i]; }
@@ -125,18 +127,16 @@ inline Mat4 Perspective(float inverseAspectRatio, float fovRadians, float zNear,
 	// Scales x and y and normalizes z values from [zNear, zFar] to [0, zFar] and puts z in w
 	// This allows z to be saved even after perspective division so it can be used for depth 
 	// testing later on.
-	float inverseTanFov = 1.0f / std::tan(fovRadians / 2); // cam to projection plane distance
+	float inverseTanFov = 1.0f / std::tan(fovRadians / 2.0f); // cam to projection plane distance
 	return {
 		inverseAspectRatio * inverseTanFov, 0,				0,						0,
 		0,									inverseTanFov,  0,						0,
-		0,									0,				zFar / (zFar - zNear), -((zNear * zFar) / (zFar - zNear)),
+		0,									0,				zFar / (zFar - zNear),  (-zNear * zFar) / (zFar - zNear),
 		0,									0,				1,						0
 	};
 }
 
-inline Mat4 LookAt(Vec3 camPos, Vec3 camForward, Vec3 worldUp) {
-	Vec3 camRight = Normalize(Cross(worldUp, camForward));
-	Vec3 camUp = Normalize(Cross(camForward, camRight));
+inline Mat4 LookAt1(Vec3 camPos, Vec3 camRight, Vec3 camUp, Vec3 camForward) {
 	return {
 		camRight.x, camRight.y, camRight.z, -Dot(camRight, camPos),
 		camUp.x, camUp.y, camUp.z, -Dot(camUp, camPos),
@@ -154,3 +154,5 @@ inline Vec4 PerspectiveProject(const Mat4& projMat, Vec4 vec) {
 	}
 	return product;
 }
+
+#endif // !MATRIX_H

@@ -1,5 +1,5 @@
-#ifndef RTWEEKEND_H
-#define RTWEEKEND_H
+#ifndef UTILITIES_H
+#define UTILITIES_H
 
 #include <cmath>
 #include <limits>
@@ -31,4 +31,4 @@ inline float Clamp(float x, float min, float max) {
 	return x;
 }
 
-#endif // !RTWEEKEND_H
+#endif // !UTLITIES_H

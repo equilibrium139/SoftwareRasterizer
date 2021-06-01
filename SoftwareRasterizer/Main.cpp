@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include "Camera.h"
 #include "Vector.h"
 #include "Display.h"
 #include "Light.h"
@@ -17,13 +18,16 @@
 bool g_IsRunning = false;
 bool g_BackfaceCullingEnabled = true;
 Vec3 cameraPosition = { 0, 0, -4 };
-Model model("Models/f22.obj");
+Model model("Assets/cube.obj");
 std::vector<Vec3> modelScreenSpaceVertices; // z = 1 / w of vertex in after perspective transformation. Necessary for perspective correct interpolation
 std::vector<Vec3> modelViewSpaceVertices;
 std::vector<Vec3> modelClipSpaceVertices;
 std::uint32_t previousFrameTime = 0;
 DirectionalLight sun{ Normalize({0, 0, 1}) };
-auto modelTexture = textureFromFile("Textures/cube.png");
+auto modelTexture = textureFromFile("Assets/cube.png");
+Camera camera(cameraPosition);
+int mouseX = g_Framebuffer.Width() / 2;
+int mouseY = g_Framebuffer.Height() / 2;
 
 enum class RenderMode {
 	WireframeAndVertices,
@@ -34,11 +38,10 @@ enum class RenderMode {
 	TexturedWireframe
 };
 
-RenderMode g_RenderMode = RenderMode::Textured;
+RenderMode g_RenderMode = RenderMode::Wireframe;
 
 void Setup() {
 	g_ColorBufferTexture = SDL_CreateTexture(g_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, g_Framebuffer.Width(), g_Framebuffer.Height());
-	model = cube;
 	modelScreenSpaceVertices.resize(model.vertices.size());
 	modelViewSpaceVertices.resize(model.vertices.size());
 	modelClipSpaceVertices.resize(model.vertices.size());
@@ -46,25 +49,43 @@ void Setup() {
 
 void ProcessInput() {
 	SDL_Event event;
-	SDL_PollEvent(&event);
-
-	switch (event.type) {
+	while (SDL_PollEvent(&event)) {
+		switch (event.type) {
 		case SDL_QUIT:
 			g_IsRunning = false;
 			break;
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.sym) {
-				case SDLK_ESCAPE: g_IsRunning = false; break;
-				case SDLK_1: g_RenderMode = RenderMode::WireframeAndVertices;  break;
-				case SDLK_2: g_RenderMode = RenderMode::Wireframe;  break;
-				case SDLK_3: g_RenderMode = RenderMode::Filled;  break;
-				case SDLK_4: g_RenderMode = RenderMode::FilledAndWireframe; break;
-				case SDLK_5: g_RenderMode = RenderMode::Textured; break;
-				case SDLK_6: g_RenderMode = RenderMode::TexturedWireframe; break;
-				case SDLK_c: g_BackfaceCullingEnabled = !g_BackfaceCullingEnabled; break;
+			case SDLK_ESCAPE: g_IsRunning = false; break;
+			case SDLK_1: g_RenderMode = RenderMode::WireframeAndVertices;  break;
+			case SDLK_2: g_RenderMode = RenderMode::Wireframe;  break;
+			case SDLK_3: g_RenderMode = RenderMode::Filled;  break;
+			case SDLK_4: g_RenderMode = RenderMode::FilledAndWireframe; break;
+			case SDLK_5: g_RenderMode = RenderMode::Textured; break;
+			case SDLK_6: g_RenderMode = RenderMode::TexturedWireframe; break;
+			case SDLK_c: g_BackfaceCullingEnabled = !g_BackfaceCullingEnabled; break;
 			}
-			if (event.key.keysym.sym == SDLK_ESCAPE) { g_IsRunning = false; }
 			break;
+		case SDL_MOUSEMOTION:
+			camera.ProcessMouseMovement(event.motion.xrel, -event.motion.yrel);
+			break;
+		}
+	}
+
+	// Processing these key presses with keyboard state feels smoother than processing 
+	// them as events in the switch above
+	auto keyboardState = SDL_GetKeyboardState(NULL);
+	if (keyboardState[SDL_SCANCODE_W]) {
+		camera.ProcessKeyboard(CAM_FORWARD, FRAME_TARGET_TIME_MS / 1000.0f);
+	}
+	if (keyboardState[SDL_SCANCODE_S]) {
+		camera.ProcessKeyboard(CAM_BACKWARD, FRAME_TARGET_TIME_MS / 1000.0f);
+	}
+	if (keyboardState[SDL_SCANCODE_A]) {
+		camera.ProcessKeyboard(CAM_LEFT, FRAME_TARGET_TIME_MS / 1000.0f);
+	}
+	if (keyboardState[SDL_SCANCODE_D]) {
+		camera.ProcessKeyboard(CAM_RIGHT, FRAME_TARGET_TIME_MS / 1000.0f);
 	}
 }
 
@@ -76,17 +97,11 @@ void Update() {
 		SDL_Delay(waitTime);
 	}
 
-	if (auto frameTime = SDL_GetTicks() - previousFrameTime; frameTime > 34) {
-		std::cout << frameTime << '\n';
-	}
-
 	previousFrameTime = SDL_GetTicks();
 
-	model.rotation.x += 0.01f;
-	model.rotation.y += 0.01f;
-	model.rotation.z += 0.01f;
+	// model.rotation.x += 0.01f;
 	Mat4 worldMatrix = model.GetModelMatrix();
-	Mat4 viewMatrix = Translation(-cameraPosition);
+	Mat4 viewMatrix = camera.GetViewMatrix();
 	Mat4 projMatrix = Perspective((float)g_Framebuffer.Height() / (float)g_Framebuffer.Width(), M_PI / 3.0f, 0.1f, 100.0f);
 	Mat4 worldViewMatrix = viewMatrix * worldMatrix;
 	
@@ -107,22 +122,6 @@ void Update() {
 void Render() {
 	SDL_SetRenderDrawColor(g_Renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
 	SDL_RenderClear(g_Renderer);
-
-	std::sort(model.faces.begin(), model.faces.end(),
-		[](Face& face1, Face& face2) {
-			auto face1Depth1 = modelViewSpaceVertices[face1.a].z;
-			auto face1Depth2 = modelViewSpaceVertices[face1.b].z;
-			auto face1Depth3 = modelViewSpaceVertices[face1.c].z;
-
-			auto face2Depth1 = modelViewSpaceVertices[face2.a].z;
-			auto face2Depth2 = modelViewSpaceVertices[face2.b].z;
-			auto face2Depth3 = modelViewSpaceVertices[face2.c].z;
-
-			auto face1AvgDepth = (face1Depth1 + face1Depth2 + face1Depth3) / 3.0f;
-			auto face2AvgDepth = (face2Depth1 + face2Depth2 + face2Depth3) / 3.0f;
-
-			return face1AvgDepth > face2AvgDepth;
-		});
 
 	for (Face& face : model.faces) {
 		Triangle screenSpaceTriangle { modelScreenSpaceVertices[face.a], 
@@ -180,7 +179,7 @@ void Render() {
 	}
 	
 	RenderColorBuffer();
-	g_Framebuffer.ClearColorBuffer(0xFF000000);
+	g_Framebuffer.ClearBuffers(0xFF000000);
 
 	SDL_RenderPresent(g_Renderer);
 }

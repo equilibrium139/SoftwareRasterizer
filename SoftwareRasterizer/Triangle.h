@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TRIANGLE_H
+#define TRIANGLE_H
 
 #include <cstdint>
 #include "Utilities.h"
@@ -14,7 +15,7 @@ struct Face {
 	Color color;
 };
 
-inline bool IsFrontFacingScreenSpace(Triangle t) {
+inline bool IsFrontFacingScreenSpace(const Triangle& t) {
 	auto ab = t.b - t.a;
 	auto bc = t.c - t.b;
 	return (ab.x * bc.y - ab.y * bc.x) > 0; // Cull if CCW. Since y is going down in screen space, we check > 0
@@ -25,3 +26,5 @@ inline bool IsFrontFacingClipSpace(Vec3 a, Vec3 b, Vec3 c) {
 	auto bc = c - b;
 	return (ab.x * bc.y - ab.y * bc.x) < 0;
 }
+
+#endif // TRIANGLE_H

@@ -11,10 +11,12 @@
 class Framebuffer {
 public:
 	Framebuffer() = default;
-	Framebuffer(int width, int height) : width(width), height(height), colorBuffer(width* height), minMaxXValues(height, std::make_pair(INT_MAX, INT_MIN)) {}
+	Framebuffer(int width, int height) 
+		: width(width), height(height), colorBuffer(width* height), depthBuffer(width * height, FLT_MIN), minMaxXValues(height, std::make_pair(INT_MAX, INT_MIN)) {}
 
-	void ClearColorBuffer(Color color) {
+	void ClearBuffers(Color color) {
 		std::fill(colorBuffer.begin(), colorBuffer.end(), color);
+		std::fill(depthBuffer.begin(), depthBuffer.end(), FLT_MIN);
 	}
 
 	void DrawLine(int x0, int y0, int x1, int y1, Color color) {
@@ -107,19 +109,25 @@ public:
 			for (int x = xStart; x <= xEnd; x++) {
 				// Calculate barycentric coordinates
 				const auto alpha = triangleBPCAreaTimes2 * inverseTriangleAreaTimes2;
-
 				const auto beta = triangleAPCAreaTimes2 * inverseTriangleAreaTimes2;
-
 				const auto gamma = 1.0f - alpha - beta;
+
+				const auto interpolatedInverseZ = alpha * a.z + beta * b.z + gamma * c.z;
+				const auto pixelIndex = y * width + x;
+				if (interpolatedInverseZ < depthBuffer[pixelIndex]) {
+					continue;
+				}
+				depthBuffer[pixelIndex] = interpolatedInverseZ;
 
 				// Using Vec2 operations here makes frame time extremely slow in debug mode for some reason so using individual u and v scalars instead
 				auto interpolatedTexCoordU = alpha * aInverseDepthTimesUV.u + beta * bInverseDepthTimesUV.u + gamma * cInverseDepthTimesUV.u;
 				auto interpolatedTexCoordV = alpha * aInverseDepthTimesUV.v + beta * bInverseDepthTimesUV.v + gamma * cInverseDepthTimesUV.v;
-				const auto interpolatedInverseZ = alpha * a.z + beta * b.z + gamma * c.z;
 				const auto interpolatedZ = 1.0f / interpolatedInverseZ;
 				interpolatedTexCoordU *= interpolatedZ;
 				interpolatedTexCoordV *= interpolatedZ;
 
+				// TODO: Fix negative UV coords that are happening because of certain pixels being colored
+				// even though they are outside of triangle. Likely because of float to int conversion mess.
 				DrawPixel(x, y, texture({ interpolatedTexCoordU, interpolatedTexCoordV }));
 
 				// These are the triangle areas for the next pixel in row y. They can be calculated 
@@ -130,6 +138,41 @@ public:
 			}
 			minMaxXValues[y].first = INT_MAX;
 			minMaxXValues[y].second = INT_MIN;
+		}
+	}
+	
+	int orient2d(const Vec2& a, const Vec2& b, const Vec2& c)
+	{
+		return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+	}
+
+	void drawTri(const Vec2& v0, const Vec2& v1, const Vec2& v2)
+	{
+		// Compute triangle bounding box
+		int minX = std::max({ v0.x, v1.x, v2.x });
+		int minY = std::max({ v0.y, v1.y, v2.y });
+		int maxX = std::max({ v0.x, v1.x, v2.x });
+		int maxY = std::max({ v0.y, v1.y, v2.y });
+
+		// Clip against screen bounds
+		minX = std::max(minX, 0);
+		minY = std::max(minY, 0);
+		maxX = std::min(maxX, width - 1);
+		maxY = std::min(maxY, height - 1);
+
+		// Rasterize
+		Vec2 p;
+		for (p.y = minY; p.y <= maxY; p.y++) {
+			for (p.x = minX; p.x <= maxX; p.x++) {
+				// Determine barycentric coordinates
+				int w0 = orient2d(v1, v2, p);
+				int w1 = orient2d(v2, v0, p);
+				int w2 = orient2d(v0, v1, p);
+
+				// If p is on or inside all edges, render pixel.
+				if (w0 >= 0 && w1 >= 0 && w2 >= 0)
+					DrawPixel(p, 0xFFFFFFFF);
+			}
 		}
 	}
 
@@ -148,6 +191,7 @@ public:
 		this->width = width;
 		this->height = height;
 		this->colorBuffer.resize(width * height);
+		this->depthBuffer.resize(width * height);
 		this->minMaxXValues.resize(width, std::make_pair(INT_MAX, INT_MIN));
 	}
 
@@ -268,6 +312,7 @@ private:
 
 	int width, height;
 	std::vector<Color> colorBuffer;
+	std::vector<float> depthBuffer;
 
 	// used for triangle rasterization. DrawLine<true>(...) sets the values in this array such that
 	// minMaxXValues[y].first and minMaxXValues[y].second are columns of leftmost and rightmost pixels 
