@@ -55,7 +55,7 @@ public:
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
     Mat4 GetViewMatrix()
     {
-        return LookAt1(position, right, up, front);
+        return LookAt(position, right, up, front);
     }
 
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)

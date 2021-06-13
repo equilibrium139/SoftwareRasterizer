@@ -4,9 +4,11 @@
 #include "Vector.h"
 #include "Utilities.h"
 #include "Texture.h"
+#include "Triangle.h"
 #include <vector>
 #include <utility>
 #include <limits>
+#include <immintrin.h>
 
 class Framebuffer {
 public:
@@ -40,10 +42,6 @@ public:
 		}
 	}
 
-	void DrawPixel(Vec2 point, Color color) {
-		DrawPixel(point.x, point.y, color);
-	}
-
 	void DrawLine(Vec2 a, Vec2 b, Color color) {
 		DrawLine(a.x, a.y, b.x, b.y, color);
 	}
@@ -60,7 +58,10 @@ public:
 		DrawLineImpl<true>(a, c, color);
 		DrawLineImpl<true>(b, c, color);
 
-		for (int y = a.y; y <= c.y; y++) {
+		const int startY = std::max((int)a.y, 0);
+		const int endY = std::min((int)c.y, height - 1);
+
+		for (int y = startY; y <= endY; y++) {
 			DrawHorizontalLine(y, minMaxXValues[y].first, minMaxXValues[y].second, color);
 			// Reset values for next triangle draw.
 			minMaxXValues[y].first = INT_MAX;
@@ -70,7 +71,11 @@ public:
 
 	// a.x and a.y are screen space coordinates, and a.z is the inverse of a's z coordinate in view space (1 / a.w after multiplication by perspective matrix)
 	// Same goes for b and c. This third 1/w value is used to achieve perspective correct interpolation.
-	void DrawTexturedTriangle(Vec3 a, Vec3 b, Vec3 c, Vec2 aUV, Vec2 bUV, Vec2 cUV, const Texture& texture) {
+	void DrawTexturedTriangle(Triangle& t, Vec2 aUV, Vec2 bUV, Vec2 cUV, const Texture& texture) {
+		Vec3& a = t.a;
+		Vec3& b = t.b;
+		Vec3& c = t.c;
+
 		// Sort by y value so a.y <= b.y <= c.y 
 		if (a.y > b.y) {
 			std::swap(a, b);
@@ -94,9 +99,9 @@ public:
 		const auto bInverseDepthTimesUV = b.z * bUV;
 		const auto cInverseDepthTimesUV = c.z * cUV;
 
-		DrawLineImpl<true>(a.x, a.y, b.x, b.y, 0xFFFF0000);
-		DrawLineImpl<true>(a.x, a.y, c.x, c.y, 0xFFFF0000);
-		DrawLineImpl<true>(b.x, b.y, c.x, c.y, 0xFFFF0000);
+		DrawLineImpl<true>(a.x, a.y, b.x, b.y, 0);
+		DrawLineImpl<true>(a.x, a.y, c.x, c.y, 0);
+		DrawLineImpl<true>(b.x, b.y, c.x, c.y, 0);
 
 		for (int y = a.y; y <= c.y; y++) {
 			const int xStart = minMaxXValues[y].first;
@@ -128,6 +133,7 @@ public:
 
 				// TODO: Fix negative UV coords that are happening because of certain pixels being colored
 				// even though they are outside of triangle. Likely because of float to int conversion mess.
+
 				DrawPixel(x, y, texture({ interpolatedTexCoordU, interpolatedTexCoordV }));
 
 				// These are the triangle areas for the next pixel in row y. They can be calculated 
@@ -138,41 +144,6 @@ public:
 			}
 			minMaxXValues[y].first = INT_MAX;
 			minMaxXValues[y].second = INT_MIN;
-		}
-	}
-	
-	int orient2d(const Vec2& a, const Vec2& b, const Vec2& c)
-	{
-		return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-	}
-
-	void drawTri(const Vec2& v0, const Vec2& v1, const Vec2& v2)
-	{
-		// Compute triangle bounding box
-		int minX = std::max({ v0.x, v1.x, v2.x });
-		int minY = std::max({ v0.y, v1.y, v2.y });
-		int maxX = std::max({ v0.x, v1.x, v2.x });
-		int maxY = std::max({ v0.y, v1.y, v2.y });
-
-		// Clip against screen bounds
-		minX = std::max(minX, 0);
-		minY = std::max(minY, 0);
-		maxX = std::min(maxX, width - 1);
-		maxY = std::min(maxY, height - 1);
-
-		// Rasterize
-		Vec2 p;
-		for (p.y = minY; p.y <= maxY; p.y++) {
-			for (p.x = minX; p.x <= maxX; p.x++) {
-				// Determine barycentric coordinates
-				int w0 = orient2d(v1, v2, p);
-				int w1 = orient2d(v2, v0, p);
-				int w2 = orient2d(v0, v1, p);
-
-				// If p is on or inside all edges, render pixel.
-				if (w0 >= 0 && w1 >= 0 && w2 >= 0)
-					DrawPixel(p, 0xFFFFFFFF);
-			}
 		}
 	}
 

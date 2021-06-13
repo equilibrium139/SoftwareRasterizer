@@ -136,23 +136,13 @@ inline Mat4 Perspective(float inverseAspectRatio, float fovRadians, float zNear,
 	};
 }
 
-inline Mat4 LookAt1(Vec3 camPos, Vec3 camRight, Vec3 camUp, Vec3 camForward) {
+inline Mat4 LookAt(Vec3 camPos, Vec3 camRight, Vec3 camUp, Vec3 camForward) {
 	return {
 		camRight.x, camRight.y, camRight.z, -Dot(camRight, camPos),
 		camUp.x, camUp.y, camUp.z, -Dot(camUp, camPos),
 		camForward.x, camForward.y, camForward.z, -Dot(camForward, camPos),
 		0, 0, 0, 1
 	};
-}
-
-inline Vec4 PerspectiveProject(const Mat4& projMat, Vec4 vec) {
-	auto product = projMat * vec;
-	if (product.w != 0.0f) {
-		product.x /= product.w;
-		product.y /= product.w;
-		product.z /= product.w;
-	}
-	return product;
 }
 
 #endif // !MATRIX_H

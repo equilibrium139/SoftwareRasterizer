@@ -13,7 +13,7 @@ struct Vec2 {
 			float u, v;
 		};
 	};
-	
+
 	Vec2& operator*=(float rhs) {
 		x *= rhs;
 		y *= rhs;
@@ -31,6 +31,10 @@ inline Vec2 operator-(Vec2 a, Vec2 b) {
 
 inline Vec2 operator*(float lhs, Vec2 rhs) {
 	return { rhs.x * lhs, rhs.y * lhs };
+}
+
+inline Vec2 operator*(Vec2 lhs, float rhs) {
+	return { lhs.x * rhs, lhs.y * rhs };
 }
 
 inline Vec2 operator+(Vec2 lhs, Vec2 rhs) {
@@ -198,6 +202,33 @@ struct Vec4 {
 inline Vec4 ToHomogenous(Vec3 v, float w) {
 	return {
 		v.x, v.y, v.z, w
+	};
+}
+
+inline Vec4 operator+(const Vec4& lhs, const Vec4& rhs) {
+	return {
+		lhs.x + rhs.x,
+		lhs.y + rhs.y,
+		lhs.z + rhs.z,
+		lhs.w + rhs.w,
+	};
+}
+
+inline Vec4 operator-(const Vec4& lhs, const Vec4& rhs) {
+	return Vec4 {
+		lhs.x - rhs.x,
+		lhs.y - rhs.y,
+		lhs.z - rhs.z,
+		lhs.w - rhs.w
+	};
+}
+
+inline Vec4 operator*(const Vec4& lhs, float rhs) {
+	return Vec4{
+		lhs.x * rhs,
+		lhs.y * rhs,
+		lhs.z * rhs,
+		lhs.w * rhs
 	};
 }
 

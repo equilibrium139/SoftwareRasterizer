@@ -148,6 +148,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Clipping.cpp" />
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Model.cpp" />
@@ -155,7 +156,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Clipping.h" />
     <ClInclude Include="Display.h" />
+    <ClInclude Include="fixed.h" />
     <ClInclude Include="Framebuffer.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="Light.h" />
