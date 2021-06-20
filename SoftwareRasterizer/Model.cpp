@@ -1,36 +1,16 @@
 #include "Model.h"
 
+#include "Clipping.h"
+
 #include <charconv>
 #include <fstream>
 #include <string>
 
-std::vector<Vec3> cubeVertices = {
-	{-1,  -1,  -1},
-	{-1,   1,  -1},
-	{ 1,   1,  -1},
-	{ 1,  -1,  -1},
-
-	{ 1,  -1,   1},
-	{ 1,   1,   1},
-	{-1,   1,   1},
-	{-1,  -1,   1}
-};
-
-std::vector<Face> cubeFaces = {
-	{0, 1, 2, {0, 1}, {0, 0}, {1, 0}, 0xFFFF0000},  {0, 2, 3, {0, 1}, {1, 0}, {1, 1}, 0xFFFF0000 }, // Front
-	{3, 2, 5, {0, 1}, {0, 0}, {1, 0}, 0xFF00FF00},  {3, 5, 4, {0, 1}, {1, 0}, {1, 1}, 0xFF00FF00 }, // Right
-	{4, 5, 6, {0, 1}, {0, 0}, {1, 0}, 0xFF0000FF},  {4, 6, 7, {0, 1}, {1, 0}, {1, 1}, 0xFF0000FF }, // Back
-	{7, 6, 1, {0, 1}, {0, 0}, {1, 0}, 0xFFFFFF00},  {7, 1, 0, {0, 1}, {1, 0}, {1, 1}, 0xFFFFFF00 }, // Left
-	{1, 6, 5, {0, 1}, {0, 0}, {1, 0}, 0xFFFF00FF},  {1, 5, 2, {0, 1}, {1, 0}, {1, 1}, 0xFFFF00FF }, // Top
-	{3, 4, 7, {0, 1}, {0, 0}, {1, 0}, 0xFF00FFFF},  {3, 7, 0, {0, 1}, {1, 0}, {1, 1}, 0xFF00FFFF }  // Bottom
-};
-
-Model cube = Model( cubeVertices, cubeFaces );
-
-Model::Model(const char* path)
+Model::Model(const char* meshPath, const char* texturePath)
+	:texture(*textureFromFile(texturePath))
 {
 	std::vector<Vec2> textureCoords;
-	std::ifstream file(path);
+	std::ifstream file(meshPath);
 	std::string line;
 	while (std::getline(file, line)) {
 		if (line[0] == 'v') {
@@ -76,4 +56,36 @@ Model::Model(const char* path)
 			face.color = 0xFFFFFFFF;
 		}
 	}
+}
+
+std::vector<Triangle> Model::GetScreenSpaceTriangles(const Mat4& view, const Mat4& proj, const Vec3& camPos, float halfW, float halfH) const
+{
+	std::vector<Vec4> clipSpaceVertices(vertices.size());
+	std::vector<Vec3> viewSpaceVertices(vertices.size());
+	const auto mv = view * GetModelMatrix();
+	for (int i = 0; i < vertices.size(); i++) {
+		viewSpaceVertices[i] = mv * vertices[i];
+		clipSpaceVertices[i] = proj * Vec4(viewSpaceVertices[i].x, viewSpaceVertices[i].y, viewSpaceVertices[i].z, 1.0f);
+	}
+
+	std::vector<Face> frontFaces;
+	std::copy_if(faces.begin(), faces.end(), std::back_inserter(frontFaces),
+		[&viewSpaceVertices](const Face& f) {
+			Vec3& a = viewSpaceVertices[f.a];
+			Vec3& b = viewSpaceVertices[f.b];
+			Vec3& c = viewSpaceVertices[f.c];
+			return IsFrontFacingViewSpace(a, b, c);
+		});
+
+	auto clipSpaceTris = ClipAndCull(frontFaces, clipSpaceVertices);
+
+	std::vector<Triangle> screenSpaceTries;
+	screenSpaceTries.reserve(clipSpaceTris.size());
+	std::transform(clipSpaceTris.begin(), clipSpaceTris.end(), std::back_inserter(screenSpaceTries),
+		[=](const ClipSpaceTriangle& t)
+		{
+			return ClipSpaceToScreenSpace(t, halfW, halfH);
+		});
+	
+	return screenSpaceTries;
 }

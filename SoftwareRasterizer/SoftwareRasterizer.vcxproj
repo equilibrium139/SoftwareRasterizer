@@ -160,6 +160,7 @@
     <ClInclude Include="Display.h" />
     <ClInclude Include="fixed.h" />
     <ClInclude Include="Framebuffer.h" />
+    <ClInclude Include="Scene.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Matrix.h" />

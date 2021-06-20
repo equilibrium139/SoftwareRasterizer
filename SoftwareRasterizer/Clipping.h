@@ -54,7 +54,7 @@ inline std::pair<ClipSpaceTriangle, ClipSpaceTriangle> Clip1Vertex(const Vec4& a
 	Vec2 acBeginUV = aUV + (cUV - aUV) * acAlpha;
 	return {
 		{abBegin, b, c, abBeginUV, bUV, cUV},
-		{acBegin, b, c, acBeginUV, bUV, cUV},
+		{abBegin, c, acBegin, abBeginUV, cUV, acBeginUV},
 	};
 }
 

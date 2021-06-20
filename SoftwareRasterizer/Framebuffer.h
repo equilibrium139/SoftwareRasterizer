@@ -37,9 +37,9 @@ public:
 	}
 
 	void DrawPixel(int x, int y, Color color) {
-		if (x >= 0 && x < width && y >= 0 && y < height) {
+		//if (x >= 0 && x < width && y >= 0 && y < height) {
 			colorBuffer[y * width + x] = color;
-		}
+		//}
 	}
 
 	void DrawLine(Vec2 a, Vec2 b, Color color) {
@@ -71,42 +71,46 @@ public:
 
 	// a.x and a.y are screen space coordinates, and a.z is the inverse of a's z coordinate in view space (1 / a.w after multiplication by perspective matrix)
 	// Same goes for b and c. This third 1/w value is used to achieve perspective correct interpolation.
-	void DrawTexturedTriangle(Triangle& t, Vec2 aUV, Vec2 bUV, Vec2 cUV, const Texture& texture) {
+	void DrawTexturedTriangle(Triangle& t, const Texture& texture) {
 		Vec3& a = t.a;
 		Vec3& b = t.b;
 		Vec3& c = t.c;
 
 		// Sort by y value so a.y <= b.y <= c.y 
-		if (a.y > b.y) {
+		/*if (a.y > b.y) {
 			std::swap(a, b);
-			std::swap(aUV, bUV);
+			std::swap(t.aUV, t.bUV);
 		}
 		if (b.y > c.y) {
 			std::swap(b, c);
-			std::swap(bUV, cUV);
+			std::swap(t.bUV, t.cUV);
 		}
 		if (a.y > b.y) {
 			std::swap(a, b);
-			std::swap(aUV, bUV);
-		}
+			std::swap(t.aUV, t.bUV);
+		}*/
 
 		const auto ab = b - a;
 		const auto bc = c - b;
 		const auto inverseTriangleAreaTimes2 = 1.0f / (ab.x * bc.y - ab.y * bc.x); 
 		const auto ac = c - a;
 
-		const auto aInverseDepthTimesUV = a.z * aUV;
-		const auto bInverseDepthTimesUV = b.z * bUV;
-		const auto cInverseDepthTimesUV = c.z * cUV;
+		const auto aInverseDepthTimesUV = a.z * t.aUV;
+		const auto bInverseDepthTimesUV = b.z * t.bUV;
+		const auto cInverseDepthTimesUV = c.z * t.cUV;
 
 		DrawLineImpl<true>(a.x, a.y, b.x, b.y, 0);
 		DrawLineImpl<true>(a.x, a.y, c.x, c.y, 0);
 		DrawLineImpl<true>(b.x, b.y, c.x, c.y, 0);
 
-		for (int y = a.y; y <= c.y; y++) {
-			const int xStart = minMaxXValues[y].first;
-			const int xEnd = minMaxXValues[y].second;
-			const auto p = Vec3{ (float)xStart, (float)y, 0.0f };
+		auto yBounds = std::minmax({ (int)a.y, (int)b.y, (int)c.y });
+		if (yBounds.first < 0) yBounds.first = 0;
+		if (yBounds.second > height - 1) yBounds.second = height - 1;
+
+		for (int y = yBounds.first; y <= yBounds.second; y++) {
+			const int xStart = std::max(minMaxXValues[y].first, 0);
+			const int xEnd = std::min(minMaxXValues[y].second, width - 1);
+			const auto p = Vec3{ (float)xStart + 0.5f, (float)y + 0.5f, 0.0f };
 			const auto bp = p - b;
 			const auto ap = p - a;
 			auto triangleBPCAreaTimes2 = (bc.x * bp.y - bc.y * bp.x);
@@ -133,7 +137,6 @@ public:
 
 				// TODO: Fix negative UV coords that are happening because of certain pixels being colored
 				// even though they are outside of triangle. Likely because of float to int conversion mess.
-
 				DrawPixel(x, y, texture({ interpolatedTexCoordU, interpolatedTexCoordV }));
 
 				// These are the triangle areas for the next pixel in row y. They can be calculated 

@@ -1,7 +1,5 @@
 #include "Clipping.h"
 
-#include <cmath>
-
 std::vector<ClipSpaceTriangle> ClipAndCull(const std::vector<Face>& faces, const std::vector<Vec4>& clipSpaceVertices)
 {
 	std::vector<ClipSpaceTriangle> trianglesClippedToNear;
@@ -10,10 +8,6 @@ std::vector<ClipSpaceTriangle> ClipAndCull(const std::vector<Face>& faces, const
 		const Vec4& a = clipSpaceVertices[face.a];
 		const Vec4& b = clipSpaceVertices[face.b];
 		const Vec4& c = clipSpaceVertices[face.c];
-
-		if (!IsFrontFacingClipSpace(a, b, c)) {
-			continue;
-		}
 
 		auto aClipData = VertClipData(a);
 		auto bClipData = VertClipData(b);
