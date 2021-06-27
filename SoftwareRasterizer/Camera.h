@@ -53,7 +53,7 @@ public:
     }
 
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
-    Mat4 GetViewMatrix()
+    Mat4 GetViewMatrix() const
     {
         return LookAt(position, right, up, front);
     }
@@ -64,11 +64,11 @@ public:
         float velocity = movementSpeed * deltaTime;
         if (direction == CAM_FORWARD)
             position += front * velocity;
-        if (direction == CAM_BACKWARD)
+        else if (direction == CAM_BACKWARD)
             position -= front * velocity;
-        if (direction == CAM_LEFT)
+        else if (direction == CAM_LEFT)
             position -= right * velocity;
-        if (direction == CAM_RIGHT)
+        else if (direction == CAM_RIGHT)
             position += right * velocity;
     }
 

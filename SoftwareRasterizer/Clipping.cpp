@@ -35,7 +35,7 @@ std::vector<ClipSpaceTriangle> ClipAndCull(const std::vector<Face>& faces, const
 				trianglesClippedToNear.push_back(Clip2Vertices(b, face.bUV, c, face.cUV, a, face.aUV));
 			}
 			else {
-				auto triangles = Clip1Vertex(b, face.bUV, c, face.aUV, c, face.cUV);
+				auto triangles = Clip1Vertex(b, face.bUV, a, face.aUV, c, face.cUV);
 				trianglesClippedToNear.push_back(triangles.first);
 				trianglesClippedToNear.push_back(triangles.second);
 			}

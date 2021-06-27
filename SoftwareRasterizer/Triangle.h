@@ -2,8 +2,8 @@
 #define TRIANGLE_H
 
 #include <cstdint>
-#include "Utilities.h"
 #include "Vector.h"
+#include "Colors.h"
 
 struct Triangle {
 	Vec3 a, b, c;		// z component = 1/w
@@ -27,7 +27,7 @@ inline Triangle ClipSpaceToScreenSpace(const ClipSpaceTriangle& triangle, float 
 	tri.b.z = 1.0f / triangle.b.w;
 
 	tri.c.x = (triangle.c.x / triangle.c.w) * screenHalfWidth + screenHalfWidth;
-	tri.c.y = -(triangle.c.y / triangle.c.w) * screenHalfHeight + screenHalfHeight;
+   	tri.c.y = -(triangle.c.y / triangle.c.w) * screenHalfHeight + screenHalfHeight;
 	tri.c.z = 1.0f / triangle.c.w;
 
 	tri.aUV = triangle.aUV;

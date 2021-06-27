@@ -7,7 +7,6 @@
 
 #include "fixed.h"
 
-using Color = std::uint32_t;
 using fixed = numeric::fixed<28, 4>;
 
 const float infinity = std::numeric_limits<float>::infinity();

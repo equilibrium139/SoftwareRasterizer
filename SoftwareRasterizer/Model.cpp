@@ -2,6 +2,7 @@
 
 #include "Clipping.h"
 
+#include <algorithm>
 #include <charconv>
 #include <fstream>
 #include <string>
@@ -58,34 +59,3 @@ Model::Model(const char* meshPath, const char* texturePath)
 	}
 }
 
-std::vector<Triangle> Model::GetScreenSpaceTriangles(const Mat4& view, const Mat4& proj, const Vec3& camPos, float halfW, float halfH) const
-{
-	std::vector<Vec4> clipSpaceVertices(vertices.size());
-	std::vector<Vec3> viewSpaceVertices(vertices.size());
-	const auto mv = view * GetModelMatrix();
-	for (int i = 0; i < vertices.size(); i++) {
-		viewSpaceVertices[i] = mv * vertices[i];
-		clipSpaceVertices[i] = proj * Vec4(viewSpaceVertices[i].x, viewSpaceVertices[i].y, viewSpaceVertices[i].z, 1.0f);
-	}
-
-	std::vector<Face> frontFaces;
-	std::copy_if(faces.begin(), faces.end(), std::back_inserter(frontFaces),
-		[&viewSpaceVertices](const Face& f) {
-			Vec3& a = viewSpaceVertices[f.a];
-			Vec3& b = viewSpaceVertices[f.b];
-			Vec3& c = viewSpaceVertices[f.c];
-			return IsFrontFacingViewSpace(a, b, c);
-		});
-
-	auto clipSpaceTris = ClipAndCull(frontFaces, clipSpaceVertices);
-
-	std::vector<Triangle> screenSpaceTries;
-	screenSpaceTries.reserve(clipSpaceTris.size());
-	std::transform(clipSpaceTris.begin(), clipSpaceTris.end(), std::back_inserter(screenSpaceTries),
-		[=](const ClipSpaceTriangle& t)
-		{
-			return ClipSpaceToScreenSpace(t, halfW, halfH);
-		});
-	
-	return screenSpaceTries;
-}

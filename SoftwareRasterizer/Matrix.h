@@ -145,4 +145,8 @@ inline Mat4 LookAt(Vec3 camPos, Vec3 camRight, Vec3 camUp, Vec3 camForward) {
 	};
 }
 
+inline Mat4 ModelMatrix(Vec3 pos, Vec3 rotation, Vec3 scale) {
+	return Translation(pos)* Rotation(rotation)* Scaling(scale);
+}
+
 #endif // !MATRIX_H

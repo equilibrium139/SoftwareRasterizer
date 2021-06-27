@@ -4,40 +4,49 @@
 #include <cmath>
 #include <iostream>
 
-struct Vec2 {
+template<typename T>
+struct Vec2_t {
 	union {
 		struct {
-			float x, y;
+			T x, y;
 		};
 		struct {
-			float u, v;
+			T u, v;
 		};
 	};
 
-	Vec2& operator*=(float rhs) {
+	Vec2_t& operator*=(T rhs) {
 		x *= rhs;
 		y *= rhs;
 		return *this;
 	}
 };
 
-inline bool operator==(Vec2 lhs, Vec2 rhs) {
+using Vec2 = Vec2_t<float>;
+using Vec2i = Vec2_t<int>;
+
+template<typename T>
+inline bool operator==(Vec2_t<T> lhs, Vec2_t<T> rhs) {
 	return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
-inline Vec2 operator-(Vec2 a, Vec2 b) {
+template<typename T>
+inline Vec2_t<T> operator-(Vec2_t<T> a, Vec2_t<T> b) {
 	return { a.x - b.x, a.y - b.y };
 }
 
-inline Vec2 operator*(float lhs, Vec2 rhs) {
+template<typename T>
+inline Vec2_t<T> operator*(T lhs, Vec2_t<T> rhs) {
 	return { rhs.x * lhs, rhs.y * lhs };
 }
 
-inline Vec2 operator*(Vec2 lhs, float rhs) {
+template<typename T>
+inline Vec2_t<T> operator*(Vec2_t<T> lhs, T rhs) {
 	return { lhs.x * rhs, lhs.y * rhs };
 }
 
-inline Vec2 operator+(Vec2 lhs, Vec2 rhs) {
+template<typename T>
+inline Vec2_t<T> operator+(Vec2_t<T> lhs, Vec2_t<T> rhs) {
 	return { lhs.x + rhs.x, lhs.y + rhs.y };
 }
 
