@@ -89,6 +89,14 @@ void Renderer::DrawTexturedTriangle(Triangle& t, const Texture& texture)
 	Vec2 bInverseDepthTimesUV = t.b.z * t.bUV;
 	Vec2 cInverseDepthTimesUV = t.c.z * t.cUV;
 
+	// Used for interpolating 
+	const float abDeltaU = bInverseDepthTimesUV.u - aInverseDepthTimesUV.u;
+	const float abDeltaV = bInverseDepthTimesUV.v - aInverseDepthTimesUV.v;
+	const float acDeltaU = cInverseDepthTimesUV.u - aInverseDepthTimesUV.u;
+	const float acDeltaV = cInverseDepthTimesUV.v - aInverseDepthTimesUV.v;
+	const float abDeltaInverseZ = t.b.z - t.a.z;
+	const float acDeltaInverseZ = t.c.z - t.a.z;
+
 	Vec2 p{ minX, minY };
 
 	float w0Row = orient2d(v1, v2, p);
@@ -102,14 +110,6 @@ void Renderer::DrawTexturedTriangle(Triangle& t, const Texture& texture)
 	const float w0RowIncrement = v2.x - v1.x;
 	const float w1RowIncrement = v0.x - v2.x;
 	const float w2RowIncrement = v1.x - v0.x;
-
-	// Used for interpolating 
-	const float abDeltaU = bInverseDepthTimesUV.u - aInverseDepthTimesUV.u;
-	const float abDeltaV = bInverseDepthTimesUV.v - aInverseDepthTimesUV.v;
-	const float acDeltaU = cInverseDepthTimesUV.u - aInverseDepthTimesUV.u;
-	const float acDeltaV = cInverseDepthTimesUV.v - aInverseDepthTimesUV.v;
-	const float abDeltaInverseZ = t.b.z - t.a.z;
-	const float acDeltaInverseZ = t.c.z - t.a.z;
 
 	for (p.y = minY; p.y <= maxY; p.y++) 
 	{
