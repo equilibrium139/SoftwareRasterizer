@@ -2,8 +2,9 @@
 #define WINDOW_H
 
 #include <SDL.h>
-#include "Colors.h"
 #include <optional>
+
+#include "Utilities.h"
 
 inline constexpr int FPS = 30;
 inline constexpr int FRAME_TARGET_TIME_MS = (int)(1000.0f / FPS);

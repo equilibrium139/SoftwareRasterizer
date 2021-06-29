@@ -160,7 +160,6 @@
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Clipping.h" />
-    <ClInclude Include="Colors.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Window.h" />
     <ClInclude Include="fixed.h" />

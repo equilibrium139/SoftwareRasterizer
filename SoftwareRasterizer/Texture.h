@@ -2,7 +2,6 @@
 #define TEXTURE_H
 
 #include <vector>
-#include "Colors.h"
 #include "Vector.h"
 #include "Utilities.h"
 #include <optional>

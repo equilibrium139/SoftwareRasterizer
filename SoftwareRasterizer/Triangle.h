@@ -2,7 +2,6 @@
 #define TRIANGLE_H
 
 #include <cstdint>
-#include "Colors.h"
 #include "Utilities.h"
 #include "Vector.h"
 
