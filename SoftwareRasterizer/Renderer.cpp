@@ -89,36 +89,65 @@ void Renderer::DrawTexturedTriangle(Triangle& t, const Texture& texture)
 	Vec2 bInverseDepthTimesUV = t.b.z * t.bUV;
 	Vec2 cInverseDepthTimesUV = t.c.z * t.cUV;
 
-	Vec2 p;
+	Vec2 p{ minX, minY };
+
+	float w0Row = orient2d(v1, v2, p);
+	float w1Row = orient2d(v2, v0, p);
+	float w2Row = orient2d(v0, v1, p);
+
+	const float w0ColumnIncrement = v1.y - v2.y;
+	const float w1ColumnIncrement = v2.y - v0.y;
+	const float w2ColumnIncrement = v0.y - v1.y;
+
+	const float w0RowIncrement = v2.x - v1.x;
+	const float w1RowIncrement = v0.x - v2.x;
+	const float w2RowIncrement = v1.x - v0.x;
+
+	// Used for interpolating 
+	const float abDeltaU = bInverseDepthTimesUV.u - aInverseDepthTimesUV.u;
+	const float abDeltaV = bInverseDepthTimesUV.v - aInverseDepthTimesUV.v;
+	const float acDeltaU = cInverseDepthTimesUV.u - aInverseDepthTimesUV.u;
+	const float acDeltaV = cInverseDepthTimesUV.v - aInverseDepthTimesUV.v;
+	const float abDeltaInverseZ = t.b.z - t.a.z;
+	const float acDeltaInverseZ = t.c.z - t.a.z;
+
 	for (p.y = minY; p.y <= maxY; p.y++) 
 	{
 		const int rowOffset = (int)p.y * width;
+
+		float w0 = w0Row;
+		float w1 = w1Row;
+		float w2 = w2Row;
+
 		for (p.x = minX; p.x <= maxX; p.x++) 
 		{
-			float w0 = orient2d(v1, v2, p);
-			float w1 = orient2d(v2, v0, p);
-			float w2 = orient2d(v0, v1, p);
-
 			if (w0 >= 0 && w1 >= 0 && w2 >= 0) {
-				const auto alpha = w0 * invTriAreaTimes2;
 				const auto beta = w1 * invTriAreaTimes2;
 				const auto gamma = w2 * invTriAreaTimes2;
 
-				const auto interpolatedInverseZ = alpha * t.a.z + beta * t.b.z + gamma * t.c.z;
+				const auto interpolatedInverseZ = t.a.z + beta * abDeltaInverseZ + gamma * acDeltaInverseZ;
 				const int pixelIndex = rowOffset + p.x;
 				if (interpolatedInverseZ < depthBuffer[pixelIndex]) {
 					continue;
 				}
 				depthBuffer[pixelIndex] = interpolatedInverseZ;
 
-				auto interpolatedTexCoordU = alpha * aInverseDepthTimesUV.u + beta * bInverseDepthTimesUV.u + gamma * cInverseDepthTimesUV.u;
-				auto interpolatedTexCoordV = alpha * aInverseDepthTimesUV.v + beta * bInverseDepthTimesUV.v + gamma * cInverseDepthTimesUV.v;
+				auto interpolatedTexCoordU = aInverseDepthTimesUV.u + beta * abDeltaU + gamma * acDeltaU;
+				auto interpolatedTexCoordV = aInverseDepthTimesUV.v + beta * abDeltaV + gamma * acDeltaV;
 				const auto interpolatedZ = 1.0f / interpolatedInverseZ;
 				interpolatedTexCoordU *= interpolatedZ;
 				interpolatedTexCoordV *= interpolatedZ;
 
 				colorBuffer[pixelIndex] = texture({ interpolatedTexCoordU, interpolatedTexCoordV });
 			}
+
+			w0 += w0ColumnIncrement;
+			w1 += w1ColumnIncrement;
+			w2 += w2ColumnIncrement;
 		}
+
+		w0Row += w0RowIncrement;
+		w1Row += w1RowIncrement;
+		w2Row += w2RowIncrement;
 	}
 }

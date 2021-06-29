@@ -68,9 +68,6 @@
     <ClInclude Include="Clipping.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="fixed.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -162,7 +162,6 @@
     <ClInclude Include="Clipping.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Window.h" />
-    <ClInclude Include="fixed.h" />
     <ClInclude Include="Framebuffer.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Texture.h" />
