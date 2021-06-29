@@ -15,7 +15,7 @@ public:
     const Color* ColorBufferData() { return colorBuffer.data(); }
     int Pitch() { return width * sizeof(Color); }
     void ClearBuffers() {
-        std::fill(colorBuffer.begin(), colorBuffer.end(), 0x0); 
+        std::fill(colorBuffer.begin(), colorBuffer.end(), Colors::Magenta); 
         std::fill(depthBuffer.begin(), depthBuffer.end(), FLT_MIN);
     }
 private:

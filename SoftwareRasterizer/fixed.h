@@ -125,7 +125,7 @@ namespace numeric {
 		};
 
 		template <size_t I, size_t F>
-		CONSTEXPR14 fixed<I, F> divide(fixed<I, F> numerator, fixed<I, F> denominator, fixed<I, F>& remainder, typename std::enable_if<type_from_size<I + F>::next_size::is_specialized>::type* = nullptr) {
+		__forceinline CONSTEXPR14 fixed<I, F> divide(fixed<I, F> numerator, fixed<I, F> denominator, fixed<I, F>& remainder, typename std::enable_if<type_from_size<I + F>::next_size::is_specialized>::type* = nullptr) {
 
 			using next_type = typename fixed<I, F>::next_type;
 			using base_type = typename fixed<I, F>::base_type;
@@ -143,7 +143,7 @@ namespace numeric {
 		}
 
 		template <size_t I, size_t F>
-		CONSTEXPR14 fixed<I, F> divide(fixed<I, F> numerator, fixed<I, F> denominator, fixed<I, F>& remainder, typename std::enable_if<!type_from_size<I + F>::next_size::is_specialized>::type* = nullptr) {
+		__forceinline CONSTEXPR14 fixed<I, F> divide(fixed<I, F> numerator, fixed<I, F> denominator, fixed<I, F>& remainder, typename std::enable_if<!type_from_size<I + F>::next_size::is_specialized>::type* = nullptr) {
 
 			// NOTE(eteran): division is broken for large types :-(
 			// especially when dealing with negative quantities
@@ -213,7 +213,7 @@ namespace numeric {
 
 		// this is the usual implementation of multiplication
 		template <size_t I, size_t F>
-		CONSTEXPR14 fixed<I, F> multiply(fixed<I, F> lhs, fixed<I, F> rhs, typename std::enable_if<type_from_size<I + F>::next_size::is_specialized>::type* = nullptr) {
+		__forceinline CONSTEXPR14 fixed<I, F> multiply(fixed<I, F> lhs, fixed<I, F> rhs, typename std::enable_if<type_from_size<I + F>::next_size::is_specialized>::type* = nullptr) {
 
 			using next_type = typename fixed<I, F>::next_type;
 			using base_type = typename fixed<I, F>::base_type;
@@ -230,7 +230,7 @@ namespace numeric {
 		// it is slightly slower, but is more robust since it doesn't
 		// require and upgraded type
 		template <size_t I, size_t F>
-		CONSTEXPR14 fixed<I, F> multiply(fixed<I, F> lhs, fixed<I, F> rhs, typename std::enable_if<!type_from_size<I + F>::next_size::is_specialized>::type* = nullptr) {
+		__forceinline CONSTEXPR14 fixed<I, F> multiply(fixed<I, F> lhs, fixed<I, F> rhs, typename std::enable_if<!type_from_size<I + F>::next_size::is_specialized>::type* = nullptr) {
 
 			using base_type = typename fixed<I, F>::base_type;
 
@@ -317,36 +317,36 @@ namespace numeric {
 		}
 
 	public:	// comparison operators
-		constexpr bool operator==(fixed rhs) const {
+		__forceinline constexpr bool operator==(fixed rhs) const {
 			return data_ == rhs.data_;
 		}
 
-		constexpr bool operator!=(fixed rhs) const {
+		__forceinline constexpr bool operator!=(fixed rhs) const {
 			return data_ != rhs.data_;
 		}
 
-		constexpr bool operator<(fixed rhs) const {
+		__forceinline constexpr bool operator<(fixed rhs) const {
 			return data_ < rhs.data_;
 		}
 
-		constexpr bool operator>(fixed rhs) const {
+		__forceinline constexpr bool operator>(fixed rhs) const {
 			return data_ > rhs.data_;
 		}
 
-		constexpr bool operator<=(fixed rhs) const {
+		__forceinline constexpr bool operator<=(fixed rhs) const {
 			return data_ <= rhs.data_;
 		}
 
-		constexpr bool operator>=(fixed rhs) const {
+		__forceinline constexpr bool operator>=(fixed rhs) const {
 			return data_ >= rhs.data_;
 		}
 
 	public:	// unary operators
-		constexpr bool operator!() const {
+		__forceinline constexpr bool operator!() const {
 			return !data_;
 		}
 
-		constexpr fixed operator~() const {
+		__forceinline constexpr fixed operator~() const {
 			// NOTE(eteran): this will often appear to "just negate" the value
 			// that is not an error, it is because -x == (~x+1)
 			// and that "+1" is adding an infinitesimally small fraction to the
@@ -354,109 +354,109 @@ namespace numeric {
 			return fixed::from_base(~data_);
 		}
 
-		constexpr fixed operator-() const {
+		__forceinline constexpr fixed operator-() const {
 			return fixed::from_base(-data_);
 		}
 
-		constexpr fixed operator+() const {
+		__forceinline constexpr fixed operator+() const {
 			return fixed::from_base(+data_);
 		}
 
-		CONSTEXPR14 fixed& operator++() {
+		__forceinline CONSTEXPR14 fixed& operator++() {
 			data_ += one;
 			return *this;
 		}
 
-		CONSTEXPR14 fixed& operator--() {
+		__forceinline CONSTEXPR14 fixed& operator--() {
 			data_ -= one;
 			return *this;
 		}
 
-		CONSTEXPR14 fixed operator++(int) {
+		__forceinline CONSTEXPR14 fixed operator++(int) {
 			fixed tmp(*this);
 			data_ += one;
 			return tmp;
 		}
 
-		CONSTEXPR14 fixed operator--(int) {
+		__forceinline CONSTEXPR14 fixed operator--(int) {
 			fixed tmp(*this);
 			data_ -= one;
 			return tmp;
 		}
 
 	public:	// basic math operators
-		CONSTEXPR14 fixed& operator+=(fixed n) {
+		__forceinline CONSTEXPR14 fixed& operator+=(fixed n) {
 			data_ += n.data_;
 			return *this;
 		}
 
-		CONSTEXPR14 fixed& operator-=(fixed n) {
+		__forceinline CONSTEXPR14 fixed& operator-=(fixed n) {
 			data_ -= n.data_;
 			return *this;
 		}
 
-		CONSTEXPR14 fixed& operator*=(fixed n) {
+		__forceinline CONSTEXPR14 fixed& operator*=(fixed n) {
 			return assign(detail::multiply(*this, n));
 		}
 
-		CONSTEXPR14 fixed& operator/=(fixed n) {
+		__forceinline CONSTEXPR14 fixed& operator/=(fixed n) {
 			fixed temp;
 			return assign(detail::divide(*this, n, temp));
 		}
 
 	private:
-		CONSTEXPR14 fixed& assign(fixed rhs) {
+		__forceinline CONSTEXPR14 fixed& assign(fixed rhs) {
 			data_ = rhs.data_;
 			return *this;
 		}
 
 	public: // binary math operators, effects underlying bit pattern since these 
 			// don't really typically make sense for non-integer values
-		CONSTEXPR14 fixed& operator&=(fixed n) {
+		__forceinline CONSTEXPR14 fixed& operator&=(fixed n) {
 			data_ &= n.data_;
 			return *this;
 		}
 
-		CONSTEXPR14 fixed& operator|=(fixed n) {
+		__forceinline CONSTEXPR14 fixed& operator|=(fixed n) {
 			data_ |= n.data_;
 			return *this;
 		}
 
-		CONSTEXPR14 fixed& operator^=(fixed n) {
+		__forceinline CONSTEXPR14 fixed& operator^=(fixed n) {
 			data_ ^= n.data_;
 			return *this;
 		}
 
 		template <class Integer, class = typename std::enable_if<std::is_integral<Integer>::value>::type>
-		CONSTEXPR14 fixed& operator>>=(Integer n) {
+		__forceinline CONSTEXPR14 fixed& operator>>=(Integer n) {
 			data_ >>= n;
 			return *this;
 		}
 
 		template <class Integer, class = typename std::enable_if<std::is_integral<Integer>::value>::type>
-		CONSTEXPR14 fixed& operator<<=(Integer n) {
+		__forceinline CONSTEXPR14 fixed& operator<<=(Integer n) {
 			data_ <<= n;
 			return *this;
 		}
 
 	public: // conversion to basic types
-		constexpr int to_int() const {
+		__forceinline constexpr int to_int() const {
 			return (data_ & integer_mask) >> fractional_bits;
 		}
 
-		constexpr unsigned int to_uint() const {
+		__forceinline constexpr unsigned int to_uint() const {
 			return (data_ & integer_mask) >> fractional_bits;
 		}
 
-		constexpr float to_float() const {
+		__forceinline constexpr float to_float() const {
 			return static_cast<float>(data_) / fixed::one;
 		}
 
-		constexpr double to_double() const {
+		__forceinline constexpr double to_double() const {
 			return static_cast<double>(data_) / fixed::one;
 		}
 
-		constexpr base_type to_raw() const {
+		__forceinline constexpr base_type to_raw() const {
 			return data_;
 		}
 

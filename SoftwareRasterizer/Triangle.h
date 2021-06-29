@@ -2,8 +2,9 @@
 #define TRIANGLE_H
 
 #include <cstdint>
-#include "Vector.h"
 #include "Colors.h"
+#include "Utilities.h"
+#include "Vector.h"
 
 struct Triangle {
 	Vec3 a, b, c;		// z component = 1/w
@@ -43,11 +44,11 @@ struct Face {
 	Color color;
 };
 
-inline bool IsFrontFacingScreenSpace(const Triangle& t) {
-	auto ab = t.b - t.a;
-	auto bc = t.c - t.b;
-	return (ab.x * bc.y - ab.y * bc.x) > 0; // Cull if CCW. Since y is going down in screen space, we check > 0
-}
+//inline bool IsFrontFacingScreenSpace(const Triangle& t) {
+//	auto ab = t.b - t.a;
+//	auto bc = t.c - t.b;
+//	return (ab.x * bc.y - ab.y * bc.x) > 0; // Cull if CCW. Since y is going down in screen space, we check > 0
+//}
 
 // This is wrong because having a normal with z component < 0 doesn't necessarily mean
 // the triangle is front facing. See chili clipping video for more.

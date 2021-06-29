@@ -59,47 +59,53 @@ void Renderer::Render(const Model& model, const Mat4& view, const Mat4& proj)
 	}
 }
 
-static int orient2d(const Vec2i& a, const Vec2i& b, const Vec2i& c)
+static float orient2d(const Vec2& a, const Vec2& b, const Vec2& c)
 {
 	return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 }
 
-void Renderer::DrawTexturedTriangle(Triangle& t, const Texture& texture) {
+void Renderer::DrawTexturedTriangle(Triangle& t, const Texture& texture) 
+{
 	auto xBounds = std::minmax({ t.a.x, t.b.x, t.c.x });
 	auto yBounds = std::minmax({ t.a.y, t.b.y, t.c.y });
-	int minX = xBounds.first;
-	int maxX = xBounds.second;
-	int minY = yBounds.first;
-	int maxY = yBounds.second;
+	float minX = (int)xBounds.first + 0.5f;
+	float maxX = (int)xBounds.second + 0.5f;
+	float minY = (int)yBounds.first + 0.5f;
+	float maxY = (int)yBounds.second + 0.5f;
 
-	Vec2i v0 = { t.a.x, t.a.y };
-	Vec2i v1 = { t.b.x, t.b.y };
-	Vec2i v2 = { t.c.x, t.c.y };
+	if (minX < 0) minX = 0.5f;
+	if (maxX > width - 1) maxX = width - 0.5f;
+	if (minY < 0) minY = 0.5f;
+	if (maxY > height - 1) maxY = height - 0.5f;
 
-	if (minX < 0) minX = 0;
-	if (maxX > width - 1) maxX = width - 1;
-	if (minY < 0) minY = 0;
-	if (maxY > height - 1) maxY = height - 1;
+	Vec2 v0 = { t.a.x, t.a.y };
+	Vec2 v1 = { t.b.x, t.b.y };
+	Vec2 v2 = { t.c.x, t.c.y };
 
-	float invTriAreaTimes2 = 1.0f / orient2d(v0, v1, v2);
+	auto triAreaTimes2 = orient2d(v0, v1, v2);
+	auto invTriAreaTimes2 = 1.0f / triAreaTimes2;
+
 	Vec2 aInverseDepthTimesUV = t.a.z * t.aUV;
 	Vec2 bInverseDepthTimesUV = t.b.z * t.bUV;
 	Vec2 cInverseDepthTimesUV = t.c.z * t.cUV;
 
-	Vec2i p;
-	for (p.y = minY; p.y <= maxY; p.y++) {
-		int rowOffset = p.y * width;
-		for (p.x = minX; p.x <= maxX; p.x++) {
-			int w0 = orient2d(v1, v2, p);
-			int w1 = orient2d(v2, v0, p);
-			int w2 = orient2d(v0, v1, p);
-			if ((w0 | w1 | w2) >= 0) {
-				const float alpha = w0 * invTriAreaTimes2;
-				const float beta = w1 * invTriAreaTimes2;
-				const float gamma = w2 * invTriAreaTimes2;
+	Vec2 p;
+	for (p.y = minY; p.y <= maxY; p.y++) 
+	{
+		const int rowOffset = (int)p.y * width;
+		for (p.x = minX; p.x <= maxX; p.x++) 
+		{
+			float w0 = orient2d(v1, v2, p);
+			float w1 = orient2d(v2, v0, p);
+			float w2 = orient2d(v0, v1, p);
+
+			if (w0 >= 0 && w1 >= 0 && w2 >= 0) {
+				const auto alpha = w0 * invTriAreaTimes2;
+				const auto beta = w1 * invTriAreaTimes2;
+				const auto gamma = w2 * invTriAreaTimes2;
 
 				const auto interpolatedInverseZ = alpha * t.a.z + beta * t.b.z + gamma * t.c.z;
-				const auto pixelIndex = rowOffset + p.x;
+				const int pixelIndex = rowOffset + p.x;
 				if (interpolatedInverseZ < depthBuffer[pixelIndex]) {
 					continue;
 				}

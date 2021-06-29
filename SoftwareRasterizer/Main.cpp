@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 		Renderer renderer(window.w(), window.h());
 		Scene scene;
 		scene.cam.position.z = -5;
-		scene.models.push_back(Model("Assets/cube.obj", "Assets/cube.png"));
+		scene.models.push_back(Model("Assets/f22.obj", "Assets/f22.png"));
 		std::uint32_t previousFrameTime = 0;
 		float deltaTime = 0.0f;
 
