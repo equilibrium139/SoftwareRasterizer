@@ -7,6 +7,12 @@
 
 using Color = std::uint32_t;
 
+namespace Colors {
+	constexpr Color black = 0xFF000000;
+	constexpr Color white = 0xFFFFFFFF;
+	constexpr Color magenta = 0xFFFF00FF;
+};
+
 const float infinity = std::numeric_limits<float>::infinity();
 const float pi = 3.1415926535897932385f;
 

@@ -62,14 +62,4 @@ inline bool IsFrontFacingViewSpace(const Vec3& a, const Vec3& b, const Vec3& c) 
 	return Dot(fNormal, a) < 0;
 }
 
-inline bool IsFrontFacingClipSpace(const Vec4& a, const Vec4& b, const Vec4& c) {
-	Vec3 ac = { a.x, a.y, a.z };
-	Vec3 bcc = { b.x, b.y, b.z };
-	Vec3 cc = { c.x, c.y, c.z };
-	Vec3 ab = bcc - ac;
-	Vec3 bc = cc - bcc;
-	Vec3 fNormal = Cross(ab, bc);
-	return Dot(fNormal, ac) < 0;
-}
-
 #endif // TRIANGLE_H

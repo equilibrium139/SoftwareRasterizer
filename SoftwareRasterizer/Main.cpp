@@ -79,6 +79,9 @@ int main(int argc, char *argv[])
 	auto wnd = Window::CreateFullscreen();
 
 	if (wnd) {
+		constexpr int FPS = 30;
+		constexpr int FRAME_TARGET_TIME_MS = (int)(1000.0f / FPS);
+
 		Window& window = wnd.value();
 		Renderer renderer(window.w(), window.h());
 		Scene scene;
@@ -91,6 +94,7 @@ int main(int argc, char *argv[])
 		constexpr float msToSFactor = 1.0f / 1000.0f;
 		while (isRunning)
 		{
+			// Sleep if frame time less than target frame time
 			auto targetTime = previousFrameTime + FRAME_TARGET_TIME_MS;
 			auto currentTime = SDL_GetTicks();
 			if (targetTime > currentTime)
@@ -102,6 +106,7 @@ int main(int argc, char *argv[])
 			deltaTime = (currentTime - previousFrameTime) * msToSFactor;
 			previousFrameTime = SDL_GetTicks();
 
+			std::cout << deltaTime * 1000.0f << '\n';
 			isRunning = ProcessInput(scene.cam, deltaTime);
 			renderer.Render(scene);
 			window.CopyAndPresent(renderer.ColorBufferData(), renderer.Pitch());
